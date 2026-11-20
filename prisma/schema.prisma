@@ -100,7 +100,7 @@ model PatientProfile {
   fullName            String   @map("full_name") @db.VarChar(150)
   age                 Int?     @db.UnsignedSmallInt
   gender              Gender?
-  phone               String   @db.VarChar(20)
+  phone               String   @unique @db.VarChar(20)
   address             String   @db.VarChar(255)
   city                String   @db.VarChar(80)
   state               String   @db.VarChar(80)

@@ -26,6 +26,9 @@ export const authRepository = {
   findUserByEmail: (email: string) =>
     prisma.user.findUnique({ where: { email } }),
 
+  findProfileByPhone: (phone: string) =>
+    prisma.patientProfile.findUnique({ where: { phone } }),
+
   findUserByEmailWithProfile: (email: string) =>
     prisma.user.findUnique({
       where: { email },

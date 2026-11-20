@@ -238,7 +238,7 @@ async function main() {
     });
 
     return category;
-  });
+  }, { maxWait: 60000, timeout: 120000 });
 
   const counts = await prisma.$transaction([
     prisma.question.count({ where: { categoryId: result.id } }),

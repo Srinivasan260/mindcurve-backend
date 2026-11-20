@@ -28,9 +28,15 @@ const buildMagicLink = (rawToken: string): string =>
 
 export const authService = {
   register: async (input: RegisterInput): Promise<RegisterResult> => {
-    const existing = await authRepository.findUserByEmail(input.email);
-    if (existing) {
+    const [existingByEmail, existingByPhone] = await Promise.all([
+      authRepository.findUserByEmail(input.email),
+      authRepository.findProfileByPhone(input.phone),
+    ]);
+    if (existingByEmail) {
       throw new ApiError(409, 'An account with this email already exists');
+    }
+    if (existingByPhone) {
+      throw new ApiError(409, 'An account with this phone number already exists');
     }
 
     const passwordHash = await hashPassword(input.password);
