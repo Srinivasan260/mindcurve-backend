@@ -1,0 +1,128 @@
+{
+  "name": "Geriatric Depression Scale (Short Form)",
+  "slug": "gds-sf",
+  "description": "A 15-item yes/no screen for depression in older adults (Sheikh & Yesavage, 1986). Each depression-indicating answer scores 1; totals of 5-8 suggest mild, 9-11 moderate, and 12-15 severe depression.",
+  "scoringType": "total",
+  "displayOrder": 5,
+  "isActive": true,
+
+  "questions": [
+    {
+      "text": "Are you basically satisfied with your life?",
+      "isReverseScored": true,
+      "options": [
+        { "text": "Yes", "score": 1 },
+        { "text": "No",  "score": 0 }
+      ]
+    },
+    {
+      "text": "Have you dropped many of your activities and interests?",
+      "options": [
+        { "text": "Yes", "score": 1 },
+        { "text": "No",  "score": 0 }
+      ]
+    },
+    {
+      "text": "Do you feel that your life is empty?",
+      "options": [
+        { "text": "Yes", "score": 1 },
+        { "text": "No",  "score": 0 }
+      ]
+    },
+    {
+      "text": "Do you often get bored?",
+      "options": [
+        { "text": "Yes", "score": 1 },
+        { "text": "No",  "score": 0 }
+      ]
+    },
+    {
+      "text": "Are you in good spirits most of the time?",
+      "isReverseScored": true,
+      "options": [
+        { "text": "Yes", "score": 1 },
+        { "text": "No",  "score": 0 }
+      ]
+    },
+    {
+      "text": "Are you afraid that something bad is going to happen to you?",
+      "options": [
+        { "text": "Yes", "score": 1 },
+        { "text": "No",  "score": 0 }
+      ]
+    },
+    {
+      "text": "Do you feel happy most of the time?",
+      "isReverseScored": true,
+      "options": [
+        { "text": "Yes", "score": 1 },
+        { "text": "No",  "score": 0 }
+      ]
+    },
+    {
+      "text": "Do you often feel helpless?",
+      "options": [
+        { "text": "Yes", "score": 1 },
+        { "text": "No",  "score": 0 }
+      ]
+    },
+    {
+      "text": "Do you prefer to stay at home, rather than going out and doing new things?",
+      "options": [
+        { "text": "Yes", "score": 1 },
+        { "text": "No",  "score": 0 }
+      ]
+    },
+    {
+      "text": "Do you feel you have more problems with memory than most?",
+      "options": [
+        { "text": "Yes", "score": 1 },
+        { "text": "No",  "score": 0 }
+      ]
+    },
+    {
+      "text": "Do you think it is wonderful to be alive now?",
+      "isReverseScored": true,
+      "options": [
+        { "text": "Yes", "score": 1 },
+        { "text": "No",  "score": 0 }
+      ]
+    },
+    {
+      "text": "Do you feel pretty worthless the way you are now?",
+      "options": [
+        { "text": "Yes", "score": 1 },
+        { "text": "No",  "score": 0 }
+      ]
+    },
+    {
+      "text": "Do you feel full of energy?",
+      "isReverseScored": true,
+      "options": [
+        { "text": "Yes", "score": 1 },
+        { "text": "No",  "score": 0 }
+      ]
+    },
+    {
+      "text": "Do you feel that your situation is hopeless?",
+      "options": [
+        { "text": "Yes", "score": 1 },
+        { "text": "No",  "score": 0 }
+      ]
+    },
+    {
+      "text": "Do you think that most people are better off than you are?",
+      "options": [
+        { "text": "Yes", "score": 1 },
+        { "text": "No",  "score": 0 }
+      ]
+    }
+  ],
+
+  "riskBands": [
+    { "level": "normal",   "minScore": 0,  "maxScore": 4,  "label": "Normal",              "color": "#7BB661" },
+    { "level": "mild",     "minScore": 5,  "maxScore": 8,  "label": "Mild depression",     "color": "#F8B978" },
+    { "level": "moderate", "minScore": 9,  "maxScore": 11, "label": "Moderate depression", "color": "#EF6B1A" },
+    { "level": "severe",   "minScore": 12, "maxScore": 15, "label": "Severe depression",   "color": "#7A2E09" }
+  ]
+}

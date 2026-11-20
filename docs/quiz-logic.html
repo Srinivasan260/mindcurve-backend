@@ -1,0 +1,880 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Athma Backend &mdash; Quiz logic deep dive</title>
+    <style>
+      :root {
+        --bg: #ffffff;
+        --fg: #1a1a1a;
+        --muted: #6b7280;
+        --border: #e5e7eb;
+        --code-bg: #f6f8fa;
+        --accent: #2563eb;
+        --th-bg: #f8fafc;
+        --tag-bg: #eef2ff;
+        --tag-fg: #3730a3;
+        --warn-bg: #fef3c7;
+        --warn-fg: #92400e;
+        --ok-bg: #dcfce7;
+        --ok-fg: #166534;
+        --danger-bg: #fee2e2;
+        --danger-fg: #991b1b;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: var(--fg);
+        background: var(--bg);
+        line-height: 1.55;
+      }
+      .wrap { max-width: 1040px; margin: 0 auto; padding: 48px 24px 96px; }
+      header { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 36px; }
+      header h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: -0.3px; }
+      header .byline { color: var(--muted); font-size: 14px; }
+      header .lead { margin-top: 16px; color: #374151; font-size: 16px; }
+
+      h2 {
+        font-size: 22px;
+        margin: 48px 0 12px;
+        border-top: 1px solid var(--border);
+        padding-top: 32px;
+      }
+      h2:first-of-type { border-top: 0; padding-top: 0; }
+      h3 { font-size: 16px; margin: 28px 0 10px; color: #111827; }
+      h4 { font-size: 14px; margin: 18px 0 6px; color: #374151; text-transform: uppercase; letter-spacing: 0.5px; }
+
+      p { margin: 10px 0; }
+      ul, ol { margin: 10px 0; padding-left: 24px; }
+      li { margin: 4px 0; }
+
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        font-size: 0.9em;
+        background: var(--code-bg);
+        padding: 1px 6px;
+        border-radius: 4px;
+      }
+      pre {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        background: var(--code-bg);
+        padding: 14px 16px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 13px;
+        line-height: 1.5;
+        margin: 12px 0;
+        border: 1px solid var(--border);
+      }
+      pre code { background: transparent; padding: 0; }
+
+      table { border-collapse: collapse; width: 100%; margin: 14px 0 18px; font-size: 14px; }
+      th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+      th { background: var(--th-bg); font-weight: 600; }
+      tbody tr:nth-child(even) td { background: #fafbfc; }
+
+      .toc {
+        background: #f9fafb;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin: 24px 0 40px;
+        font-size: 14px;
+      }
+      .toc h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); }
+      .toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 32px; }
+      .toc li { margin: 3px 0; }
+      .toc a { color: var(--accent); text-decoration: none; }
+      .toc a:hover { text-decoration: underline; }
+
+      .note {
+        background: var(--warn-bg);
+        color: var(--warn-fg);
+        border-left: 3px solid #d97706;
+        padding: 10px 14px;
+        margin: 14px 0;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+      .ok {
+        background: var(--ok-bg);
+        color: var(--ok-fg);
+        border-left: 3px solid #16a34a;
+        padding: 10px 14px;
+        margin: 14px 0;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+      .danger {
+        background: var(--danger-bg);
+        color: var(--danger-fg);
+        border-left: 3px solid #dc2626;
+        padding: 10px 14px;
+        margin: 14px 0;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      .pill {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: var(--tag-bg);
+        color: var(--tag-fg);
+        margin-right: 4px;
+      }
+      .pill.ok { background: var(--ok-bg); color: var(--ok-fg); }
+      .pill.warn { background: var(--warn-bg); color: var(--warn-fg); }
+      .pill.danger { background: var(--danger-bg); color: var(--danger-fg); }
+
+      .diagram {
+        background: #fbfdff;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 18px;
+        margin: 18px 0;
+        overflow-x: auto;
+      }
+      .diagram svg { display: block; max-width: 100%; height: auto; }
+      .diagram .caption { font-size: 12px; color: var(--muted); margin-top: 8px; text-align: center; }
+
+      .worked {
+        border: 1px dashed #c7d2fe;
+        background: #f5f7ff;
+        border-radius: 8px;
+        padding: 14px 16px;
+        margin: 14px 0;
+      }
+      .worked h4 { margin-top: 0; color: #3730a3; }
+
+      hr { border: 0; border-top: 1px solid var(--border); margin: 36px 0; }
+
+      @media print {
+        body { color: #000; }
+        a { color: #000; text-decoration: underline; }
+        .toc { page-break-after: always; }
+        h2 { page-break-before: auto; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>Quiz logic &mdash; deep dive</h1>
+        <div class="byline">Reference &middot; 2026-11-19 &middot; Athma backend</div>
+        <p class="lead">
+          Everything that happens between a patient clicking <strong>&ldquo;Start assessment&rdquo;</strong> and the
+          backend persisting a final <strong>risk level</strong>. Covers the data model, the three scoring
+          recipes, how reverse-scoring is applied (and why it&rsquo;s applied <em>at answer time</em>, not at
+          submit), how risk bands are looked up, and how &ldquo;high risk&rdquo; is flagged for triage. Every
+          mechanism has a flowchart and a worked example with real numbers.
+        </p>
+      </header>
+
+      <nav class="toc">
+        <h3>Contents</h3>
+        <ol>
+          <li><a href="#big-picture">Big picture &mdash; one flowchart</a></li>
+          <li><a href="#data-model">Data model &mdash; 6 tables</a></li>
+          <li><a href="#lifecycle">Quiz lifecycle &mdash; 3 endpoints</a></li>
+          <li><a href="#start">Step 1 &mdash; starting an assessment</a></li>
+          <li><a href="#submit-answer">Step 2 &mdash; submitting each answer</a></li>
+          <li><a href="#reverse">Reverse scoring &mdash; the formula</a></li>
+          <li><a href="#submit">Step 3 &mdash; finalising the assessment</a></li>
+          <li><a href="#recipe-a">Recipe A &mdash; <code>total</code></a></li>
+          <li><a href="#recipe-b">Recipe B &mdash; <code>subscale_sum_cutoff</code></a></li>
+          <li><a href="#recipe-c">Recipe C &mdash; <code>subscale_mean_band</code></a></li>
+          <li><a href="#high-risk">High-risk flagging</a></li>
+          <li><a href="#edge-cases">Edge cases &amp; failure modes</a></li>
+        </ol>
+      </nav>
+
+      <!-- =====================================================================
+           1. BIG PICTURE
+           ===================================================================== -->
+      <h2 id="big-picture">1. Big picture &mdash; one flowchart</h2>
+      <p>
+        A patient&rsquo;s quiz flows through three REST calls, each guarded by <code>requireAuth</code> +
+        <code>requireRole('patient')</code>. The diagram below collapses every moving part onto one page &mdash; the
+        rest of this document zooms into each box.
+      </p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 980 540" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="End-to-end quiz flow">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#374151" />
+            </marker>
+            <style>
+              .box { fill: #ffffff; stroke: #374151; stroke-width: 1.2; }
+              .box-start { fill: #dcfce7; stroke: #166534; }
+              .box-end   { fill: #fee2e2; stroke: #991b1b; }
+              .box-decision { fill: #fef3c7; stroke: #92400e; }
+              .box-db  { fill: #eef2ff; stroke: #3730a3; }
+              .lbl { font: 600 13px -apple-system, "Segoe UI", sans-serif; fill: #111827; }
+              .lbl-sm { font: 12px -apple-system, "Segoe UI", sans-serif; fill: #374151; }
+              .edge { stroke: #374151; stroke-width: 1.2; fill: none; }
+              .edge-lbl { font: 11px -apple-system, "Segoe UI", sans-serif; fill: #6b7280; }
+            </style>
+          </defs>
+
+          <!-- Row 1: Start -->
+          <ellipse cx="90" cy="40" rx="70" ry="24" class="box box-start" />
+          <text x="90" y="44" text-anchor="middle" class="lbl">Patient logs in</text>
+
+          <rect x="220" y="18" width="200" height="44" rx="6" class="box" />
+          <text x="320" y="36" text-anchor="middle" class="lbl">POST /categories/:id/assessments</text>
+          <text x="320" y="52" text-anchor="middle" class="lbl-sm">start() &mdash; creates in_progress row</text>
+
+          <polygon points="490,20 610,20 640,40 610,60 490,60 460,40" class="box box-decision" />
+          <text x="550" y="37" text-anchor="middle" class="lbl">Already in_progress?</text>
+          <text x="550" y="52" text-anchor="middle" class="lbl-sm">for this category</text>
+
+          <rect x="690" y="18" width="230" height="44" rx="6" class="box box-db" />
+          <text x="805" y="36" text-anchor="middle" class="lbl">assessments row</text>
+          <text x="805" y="52" text-anchor="middle" class="lbl-sm">resumed=true OR newly created</text>
+
+          <!-- Row 1 edges -->
+          <path class="edge" d="M160 40 L220 40" marker-end="url(#arrow)" />
+          <path class="edge" d="M420 40 L460 40" marker-end="url(#arrow)" />
+          <path class="edge" d="M640 40 L690 40" marker-end="url(#arrow)" />
+          <text x="660" y="32" class="edge-lbl">yes &rarr; resume</text>
+          <text x="660" y="56" class="edge-lbl">no &rarr; insert</text>
+
+          <!-- Row 2: Loop -->
+          <rect x="220" y="140" width="200" height="44" rx="6" class="box" />
+          <text x="320" y="158" text-anchor="middle" class="lbl">POST /assessments/:id/answers</text>
+          <text x="320" y="174" text-anchor="middle" class="lbl-sm">submitAnswer() &mdash; one per question</text>
+
+          <polygon points="490,142 610,142 640,162 610,182 490,182 460,162" class="box box-decision" />
+          <text x="550" y="159" text-anchor="middle" class="lbl">is_reverse_scored?</text>
+          <text x="550" y="174" text-anchor="middle" class="lbl-sm">flag on question</text>
+
+          <rect x="690" y="140" width="230" height="44" rx="6" class="box" />
+          <text x="805" y="158" text-anchor="middle" class="lbl">score_snapshot = max + min &minus; score</text>
+          <text x="805" y="174" text-anchor="middle" class="lbl-sm">reverse formula applied now</text>
+
+          <rect x="690" y="200" width="230" height="36" rx="6" class="box box-db" />
+          <text x="805" y="223" text-anchor="middle" class="lbl">answers table (upsert)</text>
+
+          <!-- Row 2 edges -->
+          <path class="edge" d="M805 62 L805 100 L320 100 L320 140" marker-end="url(#arrow)" />
+          <path class="edge" d="M420 162 L460 162" marker-end="url(#arrow)" />
+          <path class="edge" d="M640 162 L690 162" marker-end="url(#arrow)" />
+          <path class="edge" d="M550 182 L550 218 L690 218" marker-end="url(#arrow)" />
+          <text x="660" y="155" class="edge-lbl">true</text>
+          <text x="555" y="205" class="edge-lbl">false &rarr; store raw</text>
+
+          <!-- loop arrow back -->
+          <path class="edge" d="M220 162 L180 162 L180 240 L320 240 L320 184" marker-end="url(#arrow)" stroke-dasharray="4 3" />
+          <text x="130" y="200" class="edge-lbl">repeat per question</text>
+
+          <!-- Row 3: Submit -->
+          <rect x="220" y="310" width="200" height="44" rx="6" class="box" />
+          <text x="320" y="328" text-anchor="middle" class="lbl">POST /assessments/:id/submit</text>
+          <text x="320" y="344" text-anchor="middle" class="lbl-sm">submit() &mdash; finalise</text>
+
+          <polygon points="490,290 610,290 640,330 610,370 490,370 460,330" class="box box-decision" />
+          <text x="550" y="325" text-anchor="middle" class="lbl">category.scoringType</text>
+          <text x="550" y="342" text-anchor="middle" class="lbl-sm">dispatch recipe</text>
+
+          <rect x="690" y="278" width="230" height="36" rx="6" class="box" />
+          <text x="805" y="301" text-anchor="middle" class="lbl">Recipe A &mdash; computeTotal</text>
+
+          <rect x="690" y="322" width="230" height="36" rx="6" class="box" />
+          <text x="805" y="345" text-anchor="middle" class="lbl">Recipe B &mdash; subscaleSumCutoff</text>
+
+          <rect x="690" y="366" width="230" height="36" rx="6" class="box" />
+          <text x="805" y="389" text-anchor="middle" class="lbl">Recipe C &mdash; subscaleMeanBand</text>
+
+          <!-- Row 3 edges -->
+          <path class="edge" d="M320 240 L320 310" marker-end="url(#arrow)" />
+          <text x="330" y="280" class="edge-lbl">patient clicks submit</text>
+          <path class="edge" d="M420 330 L460 330" marker-end="url(#arrow)" />
+          <path class="edge" d="M640 320 L690 300" marker-end="url(#arrow)" />
+          <path class="edge" d="M640 330 L690 340" marker-end="url(#arrow)" />
+          <path class="edge" d="M640 345 L690 384" marker-end="url(#arrow)" />
+          <text x="648" y="295" class="edge-lbl">total</text>
+          <text x="648" y="328" class="edge-lbl">subscale_sum_cutoff</text>
+          <text x="648" y="400" class="edge-lbl">subscale_mean_band</text>
+
+          <!-- Row 4: Result -->
+          <rect x="220" y="440" width="200" height="44" rx="6" class="box box-db" />
+          <text x="320" y="458" text-anchor="middle" class="lbl">assessment_category_results</text>
+          <text x="320" y="474" text-anchor="middle" class="lbl-sm">one row per subscale + overall</text>
+
+          <ellipse cx="550" cy="462" rx="90" ry="28" class="box box-end" />
+          <text x="550" y="458" text-anchor="middle" class="lbl">status=completed</text>
+          <text x="550" y="474" text-anchor="middle" class="lbl-sm">overall_risk_level set</text>
+
+          <rect x="690" y="440" width="230" height="44" rx="6" class="box box-db" />
+          <text x="805" y="458" text-anchor="middle" class="lbl">activity_log</text>
+          <text x="805" y="474" text-anchor="middle" class="lbl-sm">flagged_high_risk OR assessment_completed</text>
+
+          <path class="edge" d="M805 402 L805 440" marker-end="url(#arrow)" />
+          <path class="edge" d="M690 462 L640 462" marker-end="url(#arrow)" />
+          <path class="edge" d="M460 462 L420 462" marker-end="url(#arrow)" />
+          <text x="455" y="455" class="edge-lbl">write N rows (txn)</text>
+        </svg>
+        <div class="caption">End-to-end quiz flow &mdash; three endpoints, three scoring recipes, two side-effects.</div>
+      </div>
+
+      <!-- =====================================================================
+           2. DATA MODEL
+           ===================================================================== -->
+      <h2 id="data-model">2. Data model &mdash; 6 tables</h2>
+      <p>The quiz uses six tables. Four of them are <em>configuration</em> set up by admins; two of them are <em>runtime</em> rows written as a patient takes the quiz.</p>
+
+      <table>
+        <thead><tr><th>Table</th><th>Purpose</th><th>Written by</th><th>Key fields</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>categories</code></td>
+            <td>One category = one &ldquo;assessment&rdquo; (e.g. BDI, BFI-10). Holds the <strong>scoring recipe</strong>.</td>
+            <td>Admin</td>
+            <td><code>scoring_type</code> &isin; { <code>total</code>, <code>subscale_sum_cutoff</code>, <code>subscale_mean_band</code> }</td>
+          </tr>
+          <tr>
+            <td><code>questions</code></td>
+            <td>Prompt text + metadata.</td>
+            <td>Admin</td>
+            <td><code>subscale</code> (nullable), <code>is_reverse_scored</code> (bool), <code>display_order</code></td>
+          </tr>
+          <tr>
+            <td><code>question_options</code></td>
+            <td>2&ndash;7 answer choices per question, each with a numeric <code>score</code>.</td>
+            <td>Admin</td>
+            <td><code>score</code> (int), <code>display_order</code></td>
+          </tr>
+          <tr>
+            <td><code>category_risk_bands</code></td>
+            <td>Score-range &rarr; risk-level lookup table.</td>
+            <td>Admin</td>
+            <td><code>subscale</code> (nullable &mdash; see below), <code>level</code>, <code>min_score</code>, <code>max_score</code></td>
+          </tr>
+          <tr>
+            <td><code>assessments</code></td>
+            <td>One attempt by one patient at one category.</td>
+            <td>Runtime (patient)</td>
+            <td><code>status</code>, <code>overall_risk_level</code>, <code>started_at</code>, <code>completed_at</code></td>
+          </tr>
+          <tr>
+            <td><code>answers</code></td>
+            <td>One row per answered question. Stores the <strong>already-flipped</strong> score.</td>
+            <td>Runtime (patient)</td>
+            <td><code>score_snapshot</code> &mdash; the final, scorable value</td>
+          </tr>
+          <tr>
+            <td><code>assessment_category_results</code></td>
+            <td>Computed output. One row per subscale (plus optional <code>overall</code>).</td>
+            <td>Runtime (submit)</td>
+            <td><code>subscale</code> (null means &ldquo;whole quiz&rdquo;), <code>total_score</code>, <code>risk_level</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="note">
+        <strong>Why <code>score_snapshot</code> instead of joining to the option every time?</strong> Snapshot
+        semantics: if an admin edits an option&rsquo;s score tomorrow, old assessments do not silently rewrite
+        themselves. The historical record stays accurate.
+      </div>
+
+      <h3>The <code>subscale</code> column is the whole trick</h3>
+      <p>
+        One column &mdash; <code>subscale</code> &mdash; appears on <code>questions</code>, <code>category_risk_bands</code>,
+        and <code>assessment_category_results</code>. It&rsquo;s nullable, and that nullability is load-bearing:
+      </p>
+      <ul>
+        <li>On a <code>questions</code> row: <code>null</code> = the question contributes to the single whole-quiz score. A string like <code>&quot;extraversion&quot;</code> = the question belongs to that subscale only.</li>
+        <li>On a <code>category_risk_bands</code> row: <code>null</code> = this band matches the whole-quiz total. <code>&quot;overall&quot;</code> = the aggregate row in Recipe B. A subscale name = a cutoff for that subscale.</li>
+        <li>On a <code>assessment_category_results</code> row: <code>null</code> = the single result for a Recipe-A category. A string = per-subscale result for Recipe B or C.</li>
+      </ul>
+
+      <!-- =====================================================================
+           3. LIFECYCLE
+           ===================================================================== -->
+      <h2 id="lifecycle">3. Quiz lifecycle &mdash; 3 endpoints</h2>
+      <table>
+        <thead><tr><th>#</th><th>Endpoint</th><th>Service method</th><th>What changes in the DB</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>POST /categories/:categoryId/assessments</code></td>
+            <td><code>assessmentService.start</code></td>
+            <td>Insert into <code>assessments</code> (<code>status=in_progress</code>) OR return the existing in-progress row.</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><code>POST /assessments/:id/answers</code> &nbsp;<span class="pill">loop</span></td>
+            <td><code>assessmentService.submitAnswer</code></td>
+            <td>Upsert into <code>answers</code>. Reverse-scoring applied before write.</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><code>POST /assessments/:id/submit</code></td>
+            <td><code>assessmentService.submit</code></td>
+            <td>Read all answers &rarr; dispatch recipe &rarr; write N rows to <code>assessment_category_results</code> &rarr; flip <code>status=completed</code>. All in one Prisma <code>$transaction</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- =====================================================================
+           4. START
+           ===================================================================== -->
+      <h2 id="start">4. Step 1 &mdash; starting an assessment</h2>
+      <p>Guards <em>before</em> creating a new row:</p>
+      <ol>
+        <li>Category must exist AND be <code>is_active=true</code> &rarr; else <code>404</code>.</li>
+        <li>Caller must own a <code>patient_profiles</code> row (not just a <code>users</code> row) &rarr; else <code>403</code>.</li>
+        <li>If an <code>in_progress</code> assessment for this patient + category already exists, <strong>resume it</strong> rather than inserting a duplicate.</li>
+      </ol>
+
+      <div class="diagram">
+        <svg viewBox="0 0 860 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Start assessment flow">
+          <defs>
+            <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#374151" />
+            </marker>
+          </defs>
+          <style>
+            .b  { fill:#fff; stroke:#374151; stroke-width:1.2; }
+            .bd { fill:#fef3c7; stroke:#92400e; stroke-width:1.2; }
+            .bok{ fill:#dcfce7; stroke:#166534; stroke-width:1.2; }
+            .br { fill:#fee2e2; stroke:#991b1b; stroke-width:1.2; }
+            .t  { font:600 12px -apple-system,"Segoe UI",sans-serif; fill:#111827; }
+            .ts { font:11px -apple-system,"Segoe UI",sans-serif; fill:#374151; }
+            .e  { stroke:#374151; stroke-width:1.2; fill:none; }
+            .el { font:10px -apple-system,"Segoe UI",sans-serif; fill:#6b7280; }
+          </style>
+
+          <rect x="20" y="110" width="140" height="40" rx="6" class="bok" />
+          <text x="90" y="128" text-anchor="middle" class="t">start(userId, catId)</text>
+          <text x="90" y="144" text-anchor="middle" class="ts">controller &rarr; service</text>
+
+          <polygon points="200,100 340,100 370,130 340,160 200,160 170,130" class="bd" />
+          <text x="270" y="127" text-anchor="middle" class="t">category active?</text>
+          <text x="270" y="144" text-anchor="middle" class="ts">lookup by id</text>
+
+          <polygon points="410,100 550,100 580,130 550,160 410,160 380,130" class="bd" />
+          <text x="480" y="127" text-anchor="middle" class="t">patient profile?</text>
+          <text x="480" y="144" text-anchor="middle" class="ts">role check</text>
+
+          <polygon points="620,100 760,100 790,130 760,160 620,160 590,130" class="bd" />
+          <text x="690" y="127" text-anchor="middle" class="t">in_progress exists?</text>
+          <text x="690" y="144" text-anchor="middle" class="ts">same patient + cat</text>
+
+          <rect x="620" y="20" width="200" height="40" rx="6" class="b" />
+          <text x="720" y="38" text-anchor="middle" class="t">return existing row</text>
+          <text x="720" y="54" text-anchor="middle" class="ts">resumed = true</text>
+
+          <rect x="620" y="200" width="200" height="40" rx="6" class="b" />
+          <text x="720" y="218" text-anchor="middle" class="t">insert new assessments row</text>
+          <text x="720" y="234" text-anchor="middle" class="ts">resumed = false</text>
+
+          <rect x="20" y="20" width="140" height="40" rx="6" class="br" />
+          <text x="90" y="38" text-anchor="middle" class="t">404 Not found</text>
+          <text x="90" y="54" text-anchor="middle" class="ts">category missing</text>
+
+          <rect x="20" y="200" width="140" height="40" rx="6" class="br" />
+          <text x="90" y="218" text-anchor="middle" class="t">403 Forbidden</text>
+          <text x="90" y="234" text-anchor="middle" class="ts">not a patient</text>
+
+          <path class="e" d="M160 130 L170 130" marker-end="url(#arrow2)" />
+          <path class="e" d="M370 130 L380 130" marker-end="url(#arrow2)" />
+          <path class="e" d="M580 130 L590 130" marker-end="url(#arrow2)" />
+          <path class="e" d="M690 100 L690 60 L620 60" marker-end="url(#arrow2)" />
+          <path class="e" d="M690 160 L690 200" marker-end="url(#arrow2)" />
+          <path class="e" d="M270 100 L270 40 L160 40" marker-end="url(#arrow2)" />
+          <path class="e" d="M480 160 L480 220 L160 220" marker-end="url(#arrow2)" />
+
+          <text x="590" y="85"  class="el">yes &rarr; resume</text>
+          <text x="595" y="185" class="el">no &rarr; create</text>
+          <text x="180" y="78"  class="el">no</text>
+          <text x="330" y="212" class="el">no</text>
+        </svg>
+        <div class="caption">Guards and the resume-vs-create decision in <code>assessmentService.start</code>.</div>
+      </div>
+
+      <p>Every start/resume also writes an <code>activity_log</code> row (<code>assessment_started</code> or <code>assessment_resumed</code>) so the admin dashboard can show a live feed.</p>
+
+      <!-- =====================================================================
+           5. SUBMIT ANSWER
+           ===================================================================== -->
+      <h2 id="submit-answer">5. Step 2 &mdash; submitting each answer</h2>
+      <p>
+        Called <em>once per question</em>. It&rsquo;s idempotent: the body carries <code>questionId</code> and
+        <code>selectedOptionId</code>, and the repository uses a Prisma <code>upsert</code> keyed on
+        <code>(assessmentId, questionId)</code>. A patient can therefore change their mind freely until they hit
+        submit &mdash; each call replaces the previous selection and refreshes <code>score_snapshot</code> +
+        <code>answered_at</code>.
+      </p>
+
+      <h4>Validation in order</h4>
+      <ol>
+        <li>Patient profile exists &rarr; else <code>403</code>.</li>
+        <li>Assessment belongs to this patient &rarr; else <code>404</code>.</li>
+        <li>Assessment is still <code>in_progress</code> &rarr; else <code>409</code> (locked after submit).</li>
+        <li>The selected option really belongs to the stated question AND the question belongs to <em>this
+          assessment&rsquo;s category</em> AND the question is <code>is_active</code> &rarr; else <code>422</code>. This is the
+          one query that stops cross-category or deactivated-question attacks.</li>
+      </ol>
+
+      <h4>What gets stored</h4>
+      <pre><code>answers {
+  assessmentId,
+  questionId,
+  selectedOptionId,
+  score_snapshot   // &larr; already reverse-flipped if is_reverse_scored
+}</code></pre>
+
+      <!-- =====================================================================
+           6. REVERSE SCORING
+           ===================================================================== -->
+      <h2 id="reverse">6. Reverse scoring &mdash; the formula</h2>
+      <p>
+        Some psychometric instruments include questions whose answer scale runs the <em>opposite</em> direction
+        from the rest. On the BFI-10, for example, &ldquo;I see myself as someone who is reserved&rdquo; is reversed because
+        agreement means <em>less</em> extraversion, not more. The flip is a <strong>mirror around the midpoint of
+        the option range</strong>.
+      </p>
+
+      <h3>The code</h3>
+      <pre><code>// assessment.service.ts
+let scoreSnapshot = option.score;
+if (option.question.isReverseScored) {
+  const scores = option.question.options.map(o =&gt; o.score);
+  const maxS = Math.max(...scores);
+  const minS = Math.min(...scores);
+  scoreSnapshot = maxS + minS - option.score;
+}</code></pre>
+
+      <h3>The formula</h3>
+      <p>Given a question whose options span scores <code>[min, max]</code>:</p>
+      <pre><code>flipped = max + min &minus; raw</code></pre>
+
+      <div class="worked">
+        <h4>Worked example &mdash; 5-point Likert, options 1&hellip;5</h4>
+        <table>
+          <thead><tr><th>Patient picks</th><th>raw score</th><th>max+min</th><th>flipped</th></tr></thead>
+          <tbody>
+            <tr><td>Strongly disagree</td><td>1</td><td>5+1 = 6</td><td><strong>5</strong></td></tr>
+            <tr><td>Disagree</td><td>2</td><td>6</td><td><strong>4</strong></td></tr>
+            <tr><td>Neutral</td><td>3</td><td>6</td><td><strong>3</strong></td></tr>
+            <tr><td>Agree</td><td>4</td><td>6</td><td><strong>2</strong></td></tr>
+            <tr><td>Strongly agree</td><td>5</td><td>6</td><td><strong>1</strong></td></tr>
+          </tbody>
+        </table>
+        <p>Perfect mirror. The midpoint (3) is its own reflection. And it works for non-symmetric ranges too: options 0&hellip;3 give <code>max+min = 3</code>, so <code>0&rarr;3, 1&rarr;2, 2&rarr;1, 3&rarr;0</code>.</p>
+      </div>
+
+      <h3>Why it&rsquo;s applied at answer time, not at submit</h3>
+      <div class="note">
+        <strong>Snapshot semantics.</strong> If an admin flips <code>is_reverse_scored</code> on a question
+        <em>after</em> some patients have answered it, their historical answers do not retroactively re-score.
+        The flip is baked into <code>score_snapshot</code> at the moment of answering and never reconsidered.
+        This mirrors how <code>option.score</code> edits also don&rsquo;t rewrite history.
+      </div>
+
+      <div class="diagram">
+        <svg viewBox="0 0 860 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Reverse scoring decision">
+          <defs>
+            <marker id="arrow3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#374151" />
+            </marker>
+          </defs>
+          <style>
+            .b  { fill:#fff; stroke:#374151; stroke-width:1.2; }
+            .bd { fill:#fef3c7; stroke:#92400e; stroke-width:1.2; }
+            .bok{ fill:#dcfce7; stroke:#166534; stroke-width:1.2; }
+            .bdb{ fill:#eef2ff; stroke:#3730a3; stroke-width:1.2; }
+            .t  { font:600 13px -apple-system,"Segoe UI",sans-serif; fill:#111827; }
+            .ts { font:11px -apple-system,"Segoe UI",sans-serif; fill:#374151; }
+            .e  { stroke:#374151; stroke-width:1.2; fill:none; }
+            .el { font:11px -apple-system,"Segoe UI",sans-serif; fill:#6b7280; }
+          </style>
+
+          <rect x="20" y="100" width="170" height="44" rx="6" class="bok" />
+          <text x="105" y="120" text-anchor="middle" class="t">option.score = raw</text>
+          <text x="105" y="136" text-anchor="middle" class="ts">e.g. patient picks &ldquo;Agree&rdquo; = 4</text>
+
+          <polygon points="230,100 380,100 410,122 380,144 230,144 200,122" class="bd" />
+          <text x="305" y="120" text-anchor="middle" class="t">question.is_reverse_scored</text>
+          <text x="305" y="136" text-anchor="middle" class="ts">?</text>
+
+          <rect x="450" y="20" width="200" height="44" rx="6" class="b" />
+          <text x="550" y="40" text-anchor="middle" class="t">score_snapshot = raw</text>
+          <text x="550" y="56" text-anchor="middle" class="ts">store as-is</text>
+
+          <rect x="450" y="178" width="200" height="44" rx="6" class="b" />
+          <text x="550" y="198" text-anchor="middle" class="t">score_snapshot = max+min&minus;raw</text>
+          <text x="550" y="214" text-anchor="middle" class="ts">flip around midpoint</text>
+
+          <rect x="690" y="100" width="160" height="44" rx="6" class="bdb" />
+          <text x="770" y="120" text-anchor="middle" class="t">upsert answers row</text>
+          <text x="770" y="136" text-anchor="middle" class="ts">by (asmt, question)</text>
+
+          <path class="e" d="M190 122 L200 122" marker-end="url(#arrow3)" />
+          <path class="e" d="M305 100 L305 42 L450 42" marker-end="url(#arrow3)" />
+          <path class="e" d="M305 144 L305 200 L450 200" marker-end="url(#arrow3)" />
+          <path class="e" d="M650 42 L670 42 L670 118 L690 118" marker-end="url(#arrow3)" />
+          <path class="e" d="M650 200 L670 200 L670 126 L690 126" marker-end="url(#arrow3)" />
+          <text x="340" y="78"  class="el">false &rarr; keep raw</text>
+          <text x="315" y="175" class="el">true &rarr; flip</text>
+        </svg>
+        <div class="caption">Reverse scoring branches <em>before</em> the DB write, so <code>score_snapshot</code> is always the final value.</div>
+      </div>
+
+      <!-- =====================================================================
+           7. SUBMIT (finalise)
+           ===================================================================== -->
+      <h2 id="submit">7. Step 3 &mdash; finalising the assessment</h2>
+      <p>
+        The patient has answered everything and now calls <code>POST /assessments/:id/submit</code>. The service
+        does five things in order, the last three inside one Prisma transaction:
+      </p>
+      <ol>
+        <li>Load every answer with its question&rsquo;s <code>subscale</code>.</li>
+        <li>Load every <code>category_risk_bands</code> row for the category. (Prisma returns <code>min_score</code>/<code>max_score</code> as <code>Decimal</code>; we cast to <code>number</code> so plain arithmetic works.)</li>
+        <li><strong>Dispatch on <code>category.scoring_type</code></strong> to one of three pure functions. Each returns an array of <code>{ subscale, totalScore, riskLevel }</code>.</li>
+        <li>Inside a transaction: update the assessment (<code>status=completed</code>, <code>completed_at</code>, <code>overall_risk_level</code>) &rarr; delete any stale results rows for this assessment &rarr; bulk-insert the new ones.</li>
+        <li>Write an <code>activity_log</code> row &mdash; <code>flagged_high_risk</code> if any result is <code>high</code>/<code>flagged</code>/<code>severe</code>, else <code>assessment_completed</code>.</li>
+      </ol>
+
+      <div class="note">
+        <strong><code>overall_risk_level</code> is only set for Recipe A.</strong> For subscale-based recipes
+        there&rsquo;s no single &ldquo;overall&rdquo; number that admins would trust, so the column stays <code>null</code> and
+        the detail view shows per-subscale rows instead.
+      </div>
+
+      <!-- =====================================================================
+           8. RECIPE A
+           ===================================================================== -->
+      <h2 id="recipe-a">8. Recipe A &mdash; <code>total</code></h2>
+      <p>Simplest of the three. Sum every <code>score_snapshot</code>, then find the single band row (one where <code>subscale IS NULL</code>) whose range contains the sum.</p>
+
+      <h4>Pseudocode</h4>
+      <pre><code>total = &Sigma; answers.score_snapshot
+matched = bands
+  .filter(b =&gt; b.subscale === null AND total &isin; [b.min_score, b.max_score])
+  .sort(desc by min_score)[0]
+return [{ subscale: null, totalScore: total, riskLevel: matched?.level ?? 'moderate' }]</code></pre>
+
+      <p>Sorting by <code>min_score</code> descending acts as a tie-breaker: if two bands overlap (which
+      shouldn&rsquo;t happen but we don&rsquo;t enforce it in the DB), the one with the higher floor wins. In practice
+      admins define non-overlapping ranges.</p>
+
+      <div class="worked">
+        <h4>Worked example &mdash; PHQ-9 style (9 questions, options 0&hellip;3)</h4>
+        <p>Patient answers: scores <code>3, 2, 3, 2, 1, 3, 2, 3, 2</code>. Sum = <strong>21</strong>.</p>
+        <table>
+          <thead><tr><th>subscale</th><th>level</th><th>min</th><th>max</th><th>match?</th></tr></thead>
+          <tbody>
+            <tr><td>null</td><td>minimal</td><td>0</td><td>4</td><td>no</td></tr>
+            <tr><td>null</td><td>mild</td><td>5</td><td>9</td><td>no</td></tr>
+            <tr><td>null</td><td>moderate</td><td>10</td><td>14</td><td>no</td></tr>
+            <tr><td>null</td><td>moderately severe</td><td>15</td><td>19</td><td>no</td></tr>
+            <tr><td>null</td><td><strong>severe</strong></td><td>20</td><td>27</td><td><strong>yes</strong></td></tr>
+          </tbody>
+        </table>
+        <p>Result: single row with <code>riskLevel = 'severe'</code>. Because the scoring type is <code>total</code>, this also becomes <code>assessments.overall_risk_level = 'severe'</code>, and the activity log entry is <code>flagged_high_risk</code> (see &sect;11).</p>
+      </div>
+
+      <!-- =====================================================================
+           9. RECIPE B
+           ===================================================================== -->
+      <h2 id="recipe-b">9. Recipe B &mdash; <code>subscale_sum_cutoff</code></h2>
+      <p>
+        Used when each subscale has an <strong>independent cutoff</strong>: hit the threshold on any of them and
+        you&rsquo;re flagged, regardless of the others. (Think: a screener where elevated anxiety OR elevated
+        depression OR elevated panic each qualifies for follow-up.)
+      </p>
+
+      <h4>Pseudocode</h4>
+      <pre><code>// 1. bucket answers by subscale
+bySubscale = groupBy(answers, a =&gt; a.question.subscale)   // ignores answers with no subscale
+
+for each (subscale, group) in bySubscale:
+  sum = &Sigma; group.score_snapshot
+  subBands = bands.filter(b =&gt; b.subscale === subscale)
+  matched = subBands
+    .filter(b =&gt; sum &isin; [b.min_score, b.max_score])
+    .sort(desc by min_score)[0]
+  emit { subscale, totalScore: sum, riskLevel: matched?.level ?? 'normal' }
+
+// 2. aggregate "overall" row
+overallSum = &Sigma; ALL answers.score_snapshot
+overallBands = bands.filter(b =&gt; b.subscale === 'overall' OR b.subscale === null)
+match overallSum against overallBands &rarr; emit { subscale: 'overall', ... }</code></pre>
+
+      <div class="note">
+        <strong>The convention.</strong> A band row whose <code>subscale</code> matches a real subscale name acts
+        as a <em>cutoff</em>: if the patient&rsquo;s sum lands in its <code>[min, max]</code> range, that band&rsquo;s
+        <code>level</code> wins (typically <code>flagged</code>). Otherwise we default to <code>normal</code>.
+      </div>
+
+      <div class="worked">
+        <h4>Worked example &mdash; Psychotic-screening style, 3 subscales</h4>
+        <p>Admins configured the bands below. <code>flagged</code> is the cutoff on each subscale; the
+        <code>'overall'</code> band aggregates everything for a dashboard-friendly summary.</p>
+        <table>
+          <thead><tr><th>subscale</th><th>level</th><th>min</th><th>max</th></tr></thead>
+          <tbody>
+            <tr><td>anxiety</td><td>flagged</td><td>10</td><td>999</td></tr>
+            <tr><td>depression</td><td>flagged</td><td>12</td><td>999</td></tr>
+            <tr><td>mania</td><td>flagged</td><td>8</td><td>999</td></tr>
+            <tr><td>overall</td><td>normal</td><td>0</td><td>29</td></tr>
+            <tr><td>overall</td><td>flagged</td><td>30</td><td>999</td></tr>
+          </tbody>
+        </table>
+        <p>Patient sums (after reverse-flip): anxiety = 11, depression = 7, mania = 4. Total = <strong>22</strong>.</p>
+        <table>
+          <thead><tr><th>subscale</th><th>sum</th><th>matched band</th><th>result</th></tr></thead>
+          <tbody>
+            <tr><td>anxiety</td><td>11</td><td>flagged (10&hellip;999)</td><td><span class="pill danger">flagged</span></td></tr>
+            <tr><td>depression</td><td>7</td><td><em>none matched</em></td><td><span class="pill ok">normal</span> (default)</td></tr>
+            <tr><td>mania</td><td>4</td><td><em>none matched</em></td><td><span class="pill ok">normal</span> (default)</td></tr>
+            <tr><td>overall</td><td>22</td><td>normal (0&hellip;29)</td><td><span class="pill ok">normal</span></td></tr>
+          </tbody>
+        </table>
+        <p>Four rows written to <code>assessment_category_results</code>. Because at least one row is <code>flagged</code>, the activity log entry is <code>flagged_high_risk</code>. <code>assessments.overall_risk_level</code> stays <code>null</code> (Recipe B/C never set it).</p>
+      </div>
+
+      <!-- =====================================================================
+           10. RECIPE C
+           ===================================================================== -->
+      <h2 id="recipe-c">10. Recipe C &mdash; <code>subscale_mean_band</code></h2>
+      <p>
+        The &ldquo;benchmark&rdquo; recipe. Each subscale gets a <em>mean</em> (not a sum) and that mean is bucketed into
+        a named band. Typical of personality inventories where every subscale produces a comparable score (e.g.
+        BFI-10: five traits, mean of 1&hellip;5 per trait).
+      </p>
+
+      <h4>Pseudocode</h4>
+      <pre><code>bySubscale = groupBy(answers, a =&gt; a.question.subscale)
+
+for each (subscale, scores) in bySubscale:
+  mean = &Sigma; scores / scores.length
+  applicable = bands.filter(b =&gt; b.subscale === subscale OR b.subscale === null)
+  matched = applicable.find(b =&gt; mean &isin; [b.min_score, b.max_score])
+  emit { subscale, totalScore: mean, riskLevel: matched?.level ?? 'moderate' }</code></pre>
+
+      <div class="note">
+        No overall row is computed for Recipe C &mdash; each subscale is independently meaningful and averaging
+        subscales would be misleading. The <code>applicable</code> filter accepts bands with <code>subscale IS NULL</code>
+        as well, so admins can define one shared low/medium/high ladder instead of repeating it per trait.
+      </div>
+
+      <div class="worked">
+        <h4>Worked example &mdash; BFI-10 (Extraversion, 2 questions, options 1&hellip;5)</h4>
+        <p>Question 1 (<code>&quot;I see myself as outgoing&quot;</code>, not reversed): patient picks <strong>4</strong>.<br>
+        Question 2 (<code>&quot;I see myself as reserved&quot;</code>, <code>is_reverse_scored=true</code>): patient picks <strong>2</strong>.</p>
+        <p>Reverse flip on Q2: <code>max+min &minus; raw = 5+1 &minus; 2 = 4</code>. So both <code>score_snapshot</code>s are <strong>4</strong>.</p>
+        <p>Mean for Extraversion = (4 + 4) / 2 = <strong>4.0</strong>.</p>
+        <table>
+          <thead><tr><th>subscale</th><th>level</th><th>min</th><th>max</th><th>match?</th></tr></thead>
+          <tbody>
+            <tr><td>null</td><td>low</td><td>1.0</td><td>2.4</td><td>no</td></tr>
+            <tr><td>null</td><td>moderate</td><td>2.5</td><td>3.4</td><td>no</td></tr>
+            <tr><td>null</td><td><strong>high</strong></td><td>3.5</td><td>5.0</td><td><strong>yes</strong></td></tr>
+          </tbody>
+        </table>
+        <p>Result row: <code>{ subscale: 'extraversion', totalScore: 4.0, riskLevel: 'high' }</code>. The other four traits are computed the same way, each producing its own row. Five rows total.</p>
+      </div>
+
+      <h3>Three recipes side by side</h3>
+      <table>
+        <thead>
+          <tr><th>Aspect</th><th><code>total</code></th><th><code>subscale_sum_cutoff</code></th><th><code>subscale_mean_band</code></th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Aggregation</td><td>sum of all</td><td>sum per subscale</td><td>mean per subscale</td></tr>
+          <tr><td>Rows written</td><td>1 (<code>subscale=null</code>)</td><td>N + 1 (overall)</td><td>N (one per subscale)</td></tr>
+          <tr><td>Default when no band matches</td><td><code>moderate</code> + <code>logger.warn</code></td><td><code>normal</code></td><td><code>moderate</code></td></tr>
+          <tr><td>Overlap tie-break</td><td>highest <code>min_score</code> wins</td><td>highest <code>min_score</code> wins</td><td>first match wins (<code>.find</code>)</td></tr>
+          <tr><td><code>overall_risk_level</code> set on assessment?</td><td>yes (matches the one result)</td><td>no (null)</td><td>no (null)</td></tr>
+          <tr><td>Typical instrument</td><td>PHQ-9, GAD-7, BDI</td><td>Multi-subscale screener</td><td>BFI-10, personality inventories</td></tr>
+        </tbody>
+      </table>
+
+      <!-- =====================================================================
+           11. HIGH-RISK
+           ===================================================================== -->
+      <h2 id="high-risk">11. High-risk flagging</h2>
+      <p>
+        After the results are written, the service inspects them to decide which <code>activity_log</code>
+        action to write. This is the signal the admin dashboard uses to surface at-risk patients in its live
+        feed.
+      </p>
+
+      <pre><code>const hasHighRisk = results.some(r =&gt;
+  r.riskLevel === 'high' ||
+  r.riskLevel === 'flagged' ||
+  r.riskLevel === 'severe'
+);
+
+activity_log.action = hasHighRisk
+  ? 'flagged_high_risk'
+  : 'assessment_completed';</code></pre>
+
+      <p>The three magic strings are intentionally duplicated across recipes so admins can choose the vocabulary that fits each instrument:</p>
+      <ul>
+        <li><span class="pill danger">severe</span> &mdash; usual label for Recipe A clinical screeners (PHQ-9&rsquo;s top band).</li>
+        <li><span class="pill danger">flagged</span> &mdash; usual label for Recipe B cutoff bands.</li>
+        <li><span class="pill danger">high</span> &mdash; usual label for Recipe C personality benchmarks.</li>
+      </ul>
+
+      <div class="note">
+        The <code>activity_log</code> metadata also carries a copy of every <code>{ subscale, totalScore,
+        riskLevel }</code> tuple, so the dashboard can render a one-line summary without re-reading the results
+        table.
+      </div>
+
+      <!-- =====================================================================
+           12. EDGE CASES
+           ===================================================================== -->
+      <h2 id="edge-cases">12. Edge cases &amp; failure modes</h2>
+
+      <h3>What if no band matches the computed score?</h3>
+      <p>Each recipe has a documented fallback, and Recipe A also emits a <code>logger.warn</code> so it shows up in the server logs. These defaults exist so an admin&rsquo;s misconfiguration (e.g. gap between bands) doesn&rsquo;t 500 the request &mdash; the patient still gets <em>some</em> result.</p>
+      <ul>
+        <li>Recipe A &rarr; <code>moderate</code> + warning log.</li>
+        <li>Recipe B per-subscale &rarr; <code>normal</code> (quiet).</li>
+        <li>Recipe B overall &rarr; <code>normal</code> (quiet).</li>
+        <li>Recipe C &rarr; <code>moderate</code> (quiet).</li>
+      </ul>
+
+      <h3>What if the patient re-submits an answer for the same question?</h3>
+      <p>The repository uses <code>prisma.answer.upsert</code> keyed on the unique <code>(assessmentId, questionId)</code> pair. Second answer wins. <code>answered_at</code> is refreshed to the new timestamp.</p>
+
+      <h3>What if the patient tries to submit twice?</h3>
+      <p>Second call gets <code>409 Conflict</code> because the status is no longer <code>in_progress</code>. There&rsquo;s no &ldquo;un-submit&rdquo; endpoint &mdash; the result is immutable from the patient&rsquo;s side. Admins can inspect historical answers via <code>GET /admin/assessments/:id</code>.</p>
+
+      <h3>What if an admin edits a question option&rsquo;s score after some answers exist?</h3>
+      <p>Historical answers are unaffected &mdash; they stored <code>score_snapshot</code> at answer time. New answers written after the edit will pick up the new score. This is a <em>feature</em>, not a bug: without snapshot semantics you&rsquo;d have to recompute every past assessment on every config change.</p>
+
+      <h3>What if an admin flips <code>is_reverse_scored</code> after some answers exist?</h3>
+      <p>Same answer: historical answers keep their flipped-or-not state as stored. The flag only affects answers written <em>after</em> the flip.</p>
+
+      <h3>What if a patient submits with zero answers?</h3>
+      <p>Submit still succeeds. Recipe A produces <code>total = 0</code>, which falls into whatever band owns 0 (or the <code>moderate</code> default). Recipes B and C produce zero result rows because there are no subscales to group by (plus the Recipe B overall row with sum = 0). The UI is responsible for preventing this state from the patient&rsquo;s side.</p>
+
+      <h3>What if the category changes <code>scoring_type</code> between start and submit?</h3>
+      <p>Submit reads <code>assessment.category.scoringType</code> fresh at submit time, so the <em>new</em> recipe runs. In practice admins shouldn&rsquo;t change scoring_type on a live category &mdash; the Zod validation on the admin update endpoint can&rsquo;t forbid this but the UI should warn.</p>
+
+      <hr />
+      <p style="color: var(--muted); font-size: 13px;">
+        Source: <code>src/modules/assessment/assessment.service.ts</code>,
+        <code>src/modules/assessment/assessment.repository.ts</code>,
+        <code>prisma/schema.prisma</code>. See also <a href="./backend-overview.html">backend-overview.html</a>
+        for the wider architecture and <code>/api/docs</code> (Swagger UI) for the live request/response shapes.
+      </p>
+    </div>
+  </body>
+</html>

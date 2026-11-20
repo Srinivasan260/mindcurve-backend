@@ -1,0 +1,147 @@
+{
+  "name": "Brief Emotional Intelligence Scale (BEIS-10)",
+  "slug": "beis-10",
+  "description": "A 10-item self-report measure of emotional intelligence across five facets: appraisal of own emotions, appraisal of others' emotions, regulation of own emotions, regulation of others' emotions, and utilisation of emotions. Each facet is scored as the sum of its two items on a 1-5 Likert scale (subscale range 2-10, total range 10-50).",
+  "scoringType": "subscale_sum_cutoff",
+  "displayOrder": 1,
+  "isActive": true,
+
+  "questions": [
+    {
+      "text": "I know why my emotions change",
+      "subscale": "appraisal_of_own_emotions",
+      "options": [
+        { "text": "Strongly disagree",          "score": 1 },
+        { "text": "Disagree",                   "score": 2 },
+        { "text": "Neither disagree nor agree", "score": 3 },
+        { "text": "Agree",                      "score": 4 },
+        { "text": "Strongly agree",             "score": 5 }
+      ]
+    },
+    {
+      "text": "I easily recognise my emotions as I experience them",
+      "subscale": "appraisal_of_own_emotions",
+      "options": [
+        { "text": "Strongly disagree",          "score": 1 },
+        { "text": "Disagree",                   "score": 2 },
+        { "text": "Neither disagree nor agree", "score": 3 },
+        { "text": "Agree",                      "score": 4 },
+        { "text": "Strongly agree",             "score": 5 }
+      ]
+    },
+    {
+      "text": "I can tell how people are feeling by listening to the tone of their voice",
+      "subscale": "appraisal_of_others_emotions",
+      "options": [
+        { "text": "Strongly disagree",          "score": 1 },
+        { "text": "Disagree",                   "score": 2 },
+        { "text": "Neither disagree nor agree", "score": 3 },
+        { "text": "Agree",                      "score": 4 },
+        { "text": "Strongly agree",             "score": 5 }
+      ]
+    },
+    {
+      "text": "By looking at their facial expressions, I recognise the emotions people are experiencing",
+      "subscale": "appraisal_of_others_emotions",
+      "options": [
+        { "text": "Strongly disagree",          "score": 1 },
+        { "text": "Disagree",                   "score": 2 },
+        { "text": "Neither disagree nor agree", "score": 3 },
+        { "text": "Agree",                      "score": 4 },
+        { "text": "Strongly agree",             "score": 5 }
+      ]
+    },
+    {
+      "text": "I seek out activities that make me happy",
+      "subscale": "regulation_of_own_emotions",
+      "options": [
+        { "text": "Strongly disagree",          "score": 1 },
+        { "text": "Disagree",                   "score": 2 },
+        { "text": "Neither disagree nor agree", "score": 3 },
+        { "text": "Agree",                      "score": 4 },
+        { "text": "Strongly agree",             "score": 5 }
+      ]
+    },
+    {
+      "text": "I have control over my emotions",
+      "subscale": "regulation_of_own_emotions",
+      "options": [
+        { "text": "Strongly disagree",          "score": 1 },
+        { "text": "Disagree",                   "score": 2 },
+        { "text": "Neither disagree nor agree", "score": 3 },
+        { "text": "Agree",                      "score": 4 },
+        { "text": "Strongly agree",             "score": 5 }
+      ]
+    },
+    {
+      "text": "I arrange events others enjoy",
+      "subscale": "regulation_of_others_emotions",
+      "options": [
+        { "text": "Strongly disagree",          "score": 1 },
+        { "text": "Disagree",                   "score": 2 },
+        { "text": "Neither disagree nor agree", "score": 3 },
+        { "text": "Agree",                      "score": 4 },
+        { "text": "Strongly agree",             "score": 5 }
+      ]
+    },
+    {
+      "text": "I help other people feel better when they are down",
+      "subscale": "regulation_of_others_emotions",
+      "options": [
+        { "text": "Strongly disagree",          "score": 1 },
+        { "text": "Disagree",                   "score": 2 },
+        { "text": "Neither disagree nor agree", "score": 3 },
+        { "text": "Agree",                      "score": 4 },
+        { "text": "Strongly agree",             "score": 5 }
+      ]
+    },
+    {
+      "text": "When I am in a positive mood, I am able to come up with new ideas",
+      "subscale": "utilisation_of_emotions",
+      "options": [
+        { "text": "Strongly disagree",          "score": 1 },
+        { "text": "Disagree",                   "score": 2 },
+        { "text": "Neither disagree nor agree", "score": 3 },
+        { "text": "Agree",                      "score": 4 },
+        { "text": "Strongly agree",             "score": 5 }
+      ]
+    },
+    {
+      "text": "I use good moods to help myself keep trying in the face of obstacles",
+      "subscale": "utilisation_of_emotions",
+      "options": [
+        { "text": "Strongly disagree",          "score": 1 },
+        { "text": "Disagree",                   "score": 2 },
+        { "text": "Neither disagree nor agree", "score": 3 },
+        { "text": "Agree",                      "score": 4 },
+        { "text": "Strongly agree",             "score": 5 }
+      ]
+    }
+  ],
+
+  "riskBands": [
+    { "subscale": "appraisal_of_own_emotions",      "level": "low",    "minScore": 2,  "maxScore": 5,  "label": "Low",    "color": "#F8B978" },
+    { "subscale": "appraisal_of_own_emotions",      "level": "normal", "minScore": 6,  "maxScore": 6,  "label": "Normal", "color": "#7BB661" },
+    { "subscale": "appraisal_of_own_emotions",      "level": "high",   "minScore": 7,  "maxScore": 10, "label": "High",   "color": "#1F6B2F" },
+
+    { "subscale": "appraisal_of_others_emotions",   "level": "low",    "minScore": 2,  "maxScore": 5,  "label": "Low",    "color": "#F8B978" },
+    { "subscale": "appraisal_of_others_emotions",   "level": "normal", "minScore": 6,  "maxScore": 6,  "label": "Normal", "color": "#7BB661" },
+    { "subscale": "appraisal_of_others_emotions",   "level": "high",   "minScore": 7,  "maxScore": 10, "label": "High",   "color": "#1F6B2F" },
+
+    { "subscale": "regulation_of_own_emotions",     "level": "low",    "minScore": 2,  "maxScore": 5,  "label": "Low",    "color": "#F8B978" },
+    { "subscale": "regulation_of_own_emotions",     "level": "normal", "minScore": 6,  "maxScore": 6,  "label": "Normal", "color": "#7BB661" },
+    { "subscale": "regulation_of_own_emotions",     "level": "high",   "minScore": 7,  "maxScore": 10, "label": "High",   "color": "#1F6B2F" },
+
+    { "subscale": "regulation_of_others_emotions",  "level": "low",    "minScore": 2,  "maxScore": 5,  "label": "Low",    "color": "#F8B978" },
+    { "subscale": "regulation_of_others_emotions",  "level": "normal", "minScore": 6,  "maxScore": 6,  "label": "Normal", "color": "#7BB661" },
+    { "subscale": "regulation_of_others_emotions",  "level": "high",   "minScore": 7,  "maxScore": 10, "label": "High",   "color": "#1F6B2F" },
+
+    { "subscale": "utilisation_of_emotions",        "level": "low",    "minScore": 2,  "maxScore": 5,  "label": "Low",    "color": "#F8B978" },
+    { "subscale": "utilisation_of_emotions",        "level": "normal", "minScore": 6,  "maxScore": 6,  "label": "Normal", "color": "#7BB661" },
+    { "subscale": "utilisation_of_emotions",        "level": "high",   "minScore": 7,  "maxScore": 10, "label": "High",   "color": "#1F6B2F" },
+
+    { "subscale": "overall", "level": "low",    "minScore": 10, "maxScore": 26, "label": "Low",    "color": "#F8B978" },
+    { "subscale": "overall", "level": "normal", "minScore": 27, "maxScore": 31, "label": "Normal", "color": "#7BB661" },
+    { "subscale": "overall", "level": "high",   "minScore": 32, "maxScore": 50, "label": "High",   "color": "#1F6B2F" }
+  ]
+}

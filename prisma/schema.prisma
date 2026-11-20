@@ -1,0 +1,364 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// =====================================================================
+// ENUMS
+// =====================================================================
+enum Role {
+  patient
+  admin
+  doctor
+}
+
+enum Gender {
+  male
+  female
+  other
+}
+
+enum MaritalStatus {
+  single
+  married
+  other
+}
+
+enum TokenPurpose {
+  verify_email
+  magic_login
+  password_reset
+}
+
+enum QuestionType {
+  single_choice
+  multi_choice
+  scale
+}
+
+enum RiskLevel {
+  low
+  moderate
+  high
+}
+
+enum AssessmentStatus {
+  in_progress
+  completed
+  abandoned
+}
+
+enum FollowUpStatus {
+  pending
+  contacted
+  done
+  no_response
+}
+
+enum Priority {
+  low
+  medium
+  high
+}
+
+// =====================================================================
+// 1. USER
+// =====================================================================
+model User {
+  id              String   @id @default(uuid()) @db.Char(36)
+  email           String   @unique @db.VarChar(191)
+  passwordHash    String   @map("password_hash") @db.VarChar(255)
+  role            Role     @default(patient)
+  isEmailVerified Boolean  @default(false) @map("is_email_verified")
+  isActive        Boolean  @default(true) @map("is_active")
+  lastLoginAt     DateTime? @map("last_login_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  patientProfile  PatientProfile?
+  emailTokens     EmailToken[]
+  createdCategories Category[]     @relation("CategoryCreatedBy")
+  authoredNotes   ClinicalNote[]   @relation("NoteAuthor")
+  assignedFollowUps FollowUp[]     @relation("FollowUpAssignee")
+  activityLogs    ActivityLog[]
+
+  @@index([role])
+  @@map("users")
+}
+
+// =====================================================================
+// 2. PATIENT PROFILE
+// =====================================================================
+model PatientProfile {
+  id                  String   @id @default(uuid()) @db.Char(36)
+  userId              String   @unique @map("user_id") @db.Char(36)
+  fullName            String   @map("full_name") @db.VarChar(150)
+  age                 Int?     @db.UnsignedSmallInt
+  gender              Gender?
+  phone               String   @db.VarChar(20)
+  address             String   @db.VarChar(255)
+  city                String   @db.VarChar(80)
+  state               String   @db.VarChar(80)
+  pincode             String   @db.VarChar(12)
+  location            String?  @db.VarChar(120)
+  maritalStatus       MaritalStatus? @map("marital_status")
+  education           String?  @db.VarChar(120)
+  occupation          String?  @db.VarChar(120)
+  referredBy          String?  @map("referred_by") @db.VarChar(120)
+  consentAcceptedAt   DateTime @map("consent_accepted_at")
+  consentVersion      String   @default("v1") @map("consent_version") @db.VarChar(20)
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assessments    Assessment[]
+  clinicalNotes  ClinicalNote[]
+  followUps      FollowUp[]
+
+  @@index([city])
+  @@map("patient_profiles")
+}
+
+// =====================================================================
+// 3. EMAIL TOKEN
+// =====================================================================
+model EmailToken {
+  id         String       @id @default(uuid()) @db.Char(36)
+  userId     String       @map("user_id") @db.Char(36)
+  tokenHash  String       @unique @map("token_hash") @db.VarChar(255)
+  purpose    TokenPurpose
+  expiresAt  DateTime     @map("expires_at")
+  usedAt     DateTime?    @map("used_at")
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@map("email_tokens")
+}
+
+// =====================================================================
+// 4. CATEGORY
+// =====================================================================
+model Category {
+  id            String   @id @default(uuid()) @db.Char(36)
+  name          String   @db.VarChar(120)
+  slug          String   @unique @db.VarChar(140)
+  description   String?  @db.Text
+  scoringType   String   @default("total") @map("scoring_type") @db.VarChar(40)
+  displayOrder  Int      @default(0) @map("display_order")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdBy     String   @map("created_by") @db.Char(36)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  creator     User                        @relation("CategoryCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+  questions   Question[]
+  riskBands   CategoryRiskBand[]
+  results     AssessmentCategoryResult[]
+  assessments Assessment[]
+
+  @@index([isActive, displayOrder])
+  @@map("categories")
+}
+
+// =====================================================================
+// 5. CATEGORY RISK BAND
+// =====================================================================
+model CategoryRiskBand {
+  id         String  @id @default(uuid()) @db.Char(36)
+  categoryId String  @map("category_id") @db.Char(36)
+  subscale   String? @db.VarChar(80)
+  level      String  @db.VarChar(40)
+  minScore   Decimal @map("min_score") @db.Decimal(10, 4)
+  maxScore   Decimal @map("max_score") @db.Decimal(10, 4)
+  label      String? @db.VarChar(80)
+  color      String? @db.VarChar(20)
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, subscale, level])
+  @@map("category_risk_bands")
+}
+
+// =====================================================================
+// 6. QUESTION
+// =====================================================================
+model Question {
+  id              String       @id @default(uuid()) @db.Char(36)
+  categoryId      String       @map("category_id") @db.Char(36)
+  questionText    String       @map("question_text") @db.Text
+  questionType    QuestionType @default(single_choice) @map("question_type")
+  subscale        String?      @db.VarChar(80)
+  isReverseScored Boolean      @default(false) @map("is_reverse_scored")
+  displayOrder    Int          @default(0) @map("display_order")
+  isRequired      Boolean      @default(true) @map("is_required")
+  isActive        Boolean      @default(true) @map("is_active")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  category Category         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  options  QuestionOption[]
+  answers  Answer[]
+
+  @@index([categoryId, displayOrder])
+  @@index([isActive])
+  @@index([subscale])
+  @@map("questions")
+}
+
+// =====================================================================
+// 7. QUESTION OPTION  (dynamic 2-7 per question)
+// =====================================================================
+model QuestionOption {
+  id           String @id @default(uuid()) @db.Char(36)
+  questionId   String @map("question_id") @db.Char(36)
+  optionText   String @map("option_text") @db.VarChar(255)
+  score        Int    @default(0)
+  displayOrder Int    @default(0) @map("display_order")
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers  Answer[]
+
+  @@unique([questionId, displayOrder])
+  @@map("question_options")
+}
+
+// =====================================================================
+// 8. ASSESSMENT
+// =====================================================================
+model Assessment {
+  id               String           @id @default(uuid()) @db.Char(36)
+  patientId        String           @map("patient_id") @db.Char(36)
+  categoryId       String           @map("category_id") @db.Char(36)
+  status           AssessmentStatus @default(in_progress)
+  overallRiskLevel String?          @map("overall_risk_level") @db.VarChar(40)
+  startedAt        DateTime         @default(now()) @map("started_at")
+  completedAt      DateTime?        @map("completed_at")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  patient          PatientProfile            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  category         Category                  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  answers          Answer[]
+  categoryResults  AssessmentCategoryResult[]
+  clinicalNotes    ClinicalNote[]
+  followUps        FollowUp[]
+
+  @@index([patientId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([completedAt])
+  @@map("assessments")
+}
+
+// =====================================================================
+// 9. ANSWER
+// =====================================================================
+model Answer {
+  id                String   @id @default(uuid()) @db.Char(36)
+  assessmentId      String   @map("assessment_id") @db.Char(36)
+  questionId        String   @map("question_id") @db.Char(36)
+  selectedOptionId  String   @map("selected_option_id") @db.Char(36)
+  scoreSnapshot     Int      @map("score_snapshot")
+  answeredAt        DateTime @default(now()) @map("answered_at")
+
+  assessment     Assessment     @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  question       Question       @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  selectedOption QuestionOption @relation(fields: [selectedOptionId], references: [id], onDelete: Restrict)
+
+  @@unique([assessmentId, questionId])
+  @@index([questionId])
+  @@index([selectedOptionId])
+  @@map("answers")
+}
+
+// =====================================================================
+// 10. ASSESSMENT CATEGORY RESULT
+// =====================================================================
+model AssessmentCategoryResult {
+  id           String   @id @default(uuid()) @db.Char(36)
+  assessmentId String   @map("assessment_id") @db.Char(36)
+  categoryId   String   @map("category_id") @db.Char(36)
+  subscale     String?  @db.VarChar(80)
+  totalScore   Decimal  @map("total_score") @db.Decimal(10, 4)
+  riskLevel    String   @map("risk_level") @db.VarChar(40)
+  computedAt   DateTime @default(now()) @map("computed_at")
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  category   Category   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@unique([assessmentId, categoryId, subscale], map: "acr_asmt_cat_sub_key")
+  @@index([categoryId, riskLevel])
+  @@map("assessment_category_results")
+}
+
+// =====================================================================
+// 11. CLINICAL NOTE
+// =====================================================================
+model ClinicalNote {
+  id           String   @id @default(uuid()) @db.Char(36)
+  patientId    String   @map("patient_id") @db.Char(36)
+  assessmentId String?  @map("assessment_id") @db.Char(36)
+  authorId     String   @map("author_id") @db.Char(36)
+  content      String   @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  patient    PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  assessment Assessment?    @relation(fields: [assessmentId], references: [id], onDelete: SetNull)
+  author     User           @relation("NoteAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([patientId, createdAt])
+  @@map("clinical_notes")
+}
+
+// =====================================================================
+// 12. FOLLOW UP
+// =====================================================================
+model FollowUp {
+  id            String         @id @default(uuid()) @db.Char(36)
+  patientId     String         @map("patient_id") @db.Char(36)
+  assessmentId  String?        @map("assessment_id") @db.Char(36)
+  assignedTo    String?        @map("assigned_to") @db.Char(36)
+  status        FollowUpStatus @default(pending)
+  priority      Priority       @default(medium)
+  scheduledAt   DateTime?      @map("scheduled_at")
+  completedAt   DateTime?      @map("completed_at")
+  notes         String?        @db.Text
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  patient    PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  assessment Assessment?    @relation(fields: [assessmentId], references: [id], onDelete: SetNull)
+  assignee   User?          @relation("FollowUpAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
+
+  @@index([status, priority])
+  @@index([assignedTo])
+  @@map("follow_ups")
+}
+
+// =====================================================================
+// 13. ACTIVITY LOG
+// =====================================================================
+model ActivityLog {
+  id          String   @id @default(uuid()) @db.Char(36)
+  actorId     String?  @map("actor_id") @db.Char(36)
+  action      String   @db.VarChar(60)
+  entityType  String?  @map("entity_type") @db.VarChar(40)
+  entityId    String?  @map("entity_id") @db.Char(36)
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}

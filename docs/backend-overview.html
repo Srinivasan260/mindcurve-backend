@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Athma Backend — How it's built</title>
+    <style>
+      :root {
+        --bg: #ffffff;
+        --fg: #1a1a1a;
+        --muted: #6b7280;
+        --border: #e5e7eb;
+        --code-bg: #f6f8fa;
+        --accent: #2563eb;
+        --th-bg: #f8fafc;
+        --tag-bg: #eef2ff;
+        --tag-fg: #3730a3;
+        --warn-bg: #fef3c7;
+        --warn-fg: #92400e;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: var(--fg);
+        background: var(--bg);
+        line-height: 1.55;
+      }
+      .wrap {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px 96px;
+      }
+      header { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 36px; }
+      header h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: -0.3px; }
+      header .byline { color: var(--muted); font-size: 14px; }
+      header .lead { margin-top: 16px; color: #374151; font-size: 16px; }
+
+      h2 {
+        font-size: 22px;
+        margin: 48px 0 12px;
+        padding-top: 8px;
+        border-top: 1px solid var(--border);
+        padding-top: 32px;
+      }
+      h2:first-of-type { border-top: 0; padding-top: 0; }
+      h3 { font-size: 16px; margin: 28px 0 10px; color: #111827; }
+
+      p { margin: 10px 0; }
+      ul, ol { margin: 10px 0; padding-left: 24px; }
+      li { margin: 4px 0; }
+
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        font-size: 0.9em;
+        background: var(--code-bg);
+        padding: 1px 6px;
+        border-radius: 4px;
+      }
+      pre {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        background: var(--code-bg);
+        padding: 14px 16px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 13px;
+        line-height: 1.5;
+        margin: 12px 0;
+        border: 1px solid var(--border);
+      }
+      pre code { background: transparent; padding: 0; }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 14px 0 18px;
+        font-size: 14px;
+      }
+      th, td {
+        border: 1px solid var(--border);
+        padding: 8px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th { background: var(--th-bg); font-weight: 600; }
+      tbody tr:nth-child(even) td { background: #fafbfc; }
+
+      .toc {
+        background: #f9fafb;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin: 24px 0 40px;
+        font-size: 14px;
+      }
+      .toc h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); }
+      .toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 32px; }
+      .toc li { margin: 3px 0; }
+      .toc a { color: var(--accent); text-decoration: none; }
+      .toc a:hover { text-decoration: underline; }
+
+      .method {
+        display: inline-block;
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 3px;
+        margin-right: 2px;
+      }
+      .method.GET    { background: #dbeafe; color: #1e40af; }
+      .method.POST   { background: #dcfce7; color: #166534; }
+      .method.PATCH  { background: #fef3c7; color: #92400e; }
+      .method.PUT    { background: #fce7f3; color: #9d174d; }
+      .method.DELETE { background: #fee2e2; color: #991b1b; }
+
+      .note {
+        background: var(--warn-bg);
+        color: var(--warn-fg);
+        border-left: 3px solid #d97706;
+        padding: 10px 14px;
+        margin: 14px 0;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      hr { border: 0; border-top: 1px solid var(--border); margin: 36px 0; }
+
+      @media print {
+        body { color: #000; }
+        a { color: #000; text-decoration: underline; }
+        .toc { page-break-after: always; }
+        h2 { page-break-before: auto; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>Athma Backend — How it's built</h1>
+        <div class="byline">Reference &middot; 2026-11-18</div>
+        <p class="lead">
+          A plain-English reference for the Node / Express / TypeScript backend behind the Athma mental health
+          assessment platform. Covers architecture, every API endpoint, the patient + admin journeys, the
+          scoring system, and local setup.
+        </p>
+      </header>
+
+      <nav class="toc">
+        <h3>Contents</h3>
+        <ol>
+          <li><a href="#overview">The 30-second overview</a></li>
+          <li><a href="#stack">Tech stack</a></li>
+          <li><a href="#structure">Folder structure</a></li>
+          <li><a href="#auth">Auth model</a></li>
+          <li><a href="#patient">Patient journey</a></li>
+          <li><a href="#admin">Admin journey</a></li>
+          <li><a href="#api">Full API catalog</a></li>
+          <li><a href="#scoring">The 3 scoring recipes</a></li>
+          <li><a href="#db">Database schema</a></li>
+          <li><a href="#setup">Local setup</a></li>
+        </ol>
+      </nav>
+
+      <!-- ===== OVERVIEW ===== -->
+      <h2 id="overview">1. The 30-second overview</h2>
+      <p>
+        Athma is a mental-health assessment platform with <strong>two audiences</strong> served by one backend:
+      </p>
+      <ul>
+        <li><strong>Patients</strong> register themselves, verify their email via a magic link, pick a category
+          (like Depression Screening or BFI-10 Personality), answer a set of questions, and get a risk-level
+          result.</li>
+        <li><strong>Admins / doctors</strong> configure the categories + questions + scoring thresholds, review
+          every patient's assessment, add clinical notes, schedule follow-ups, and monitor a live dashboard of
+          KPIs and activity.</li>
+      </ul>
+      <p>
+        The backend is a single REST API served on
+        <code>http://localhost:5000/api/v1</code> with interactive docs at
+        <strong><code>http://localhost:5000/api/docs</code></strong> (Swagger UI).
+      </p>
+      <table>
+        <thead><tr><th>Prefix</th><th>Who can call it</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td><code>/auth/*</code>, <code>/categories/*</code>, <code>/assessments/*</code></td>
+              <td>Patients (after login) — or public for register/login</td>
+              <td><code>POST /auth/register</code></td></tr>
+          <tr><td><code>/admin/auth/*</code></td><td>Admins / doctors</td><td><code>POST /admin/auth/login</code></td></tr>
+          <tr><td><code>/admin/*</code></td><td>Admins / doctors only (JWT role-gated)</td><td><code>GET /admin/dashboard/summary</code></td></tr>
+        </tbody>
+      </table>
+
+      <!-- ===== STACK ===== -->
+      <h2 id="stack">2. Tech stack</h2>
+      <p>Everything is TypeScript, native ES modules (<code>"type":"module"</code> in package.json), and strict compiler settings.</p>
+      <table>
+        <thead><tr><th>Layer</th><th>Choice</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Runtime</td><td>Node 20+</td><td>Native fetch, stable ESM</td></tr>
+          <tr><td>HTTP framework</td><td>Express 4</td><td>Simple, mature, massive ecosystem</td></tr>
+          <tr><td>Language</td><td>TypeScript 5 (strict)</td><td>Type safety across modules; shared Zod-inferred types</td></tr>
+          <tr><td>Dev runner</td><td><code>tsx watch</code></td><td>Runs <code>.ts</code> ESM directly, no build step in dev</td></tr>
+          <tr><td>Database</td><td>MySQL 8</td><td>Relational joins + aggregations the admin dashboard needs</td></tr>
+          <tr><td>ORM</td><td>Prisma 6</td><td>Type-safe queries, migration history, great DX</td></tr>
+          <tr><td>Validation</td><td>Zod 4</td><td>Runtime + compile-time schema in one place</td></tr>
+          <tr><td>Auth</td><td>JWT + bcrypt</td><td>Stateless sessions; 12-round password hashing</td></tr>
+          <tr><td>Email</td><td>Nodemailer (SMTP)</td><td>Dev falls back to console-log if <code>SMTP_HOST</code> is empty</td></tr>
+          <tr><td>Docs</td><td>swagger-ui-express + swagger-jsdoc</td><td>OpenAPI generated from JSDoc blocks next to each route</td></tr>
+          <tr><td>Security</td><td>helmet, cors, compression</td><td>Standard hardening</td></tr>
+          <tr><td>Logging</td><td>Morgan + a thin logger util</td><td>Request logs in dev; structured info/warn/error</td></tr>
+        </tbody>
+      </table>
+
+      <!-- ===== STRUCTURE ===== -->
+      <h2 id="structure">3. Folder structure</h2>
+      <p>The codebase is <strong>modular by feature</strong>, not by layer. Every feature lives in its own folder under <code>src/modules/</code> and follows the same 5-file pattern.</p>
+      <pre><code>src/
+├── modules/                       ← FEATURE MODULES (one folder per feature)
+│   ├── auth/                      ← register, login, magic-login
+│   ├── category/                  ← assessment categories
+│   ├── question/                  ← questions + their options
+│   ├── riskBand/                  ← score-to-risk-level thresholds
+│   ├── assessment/                ← patient takes an assessment
+│   ├── patient/                   ← admin patient directory
+│   ├── clinicalNote/              ← admin clinical notes
+│   ├── followUp/                  ← admin follow-up queue
+│   ├── dashboard/                 ← admin KPIs + charts + activity feed
+│   └── health/                    ← /health liveness probe
+├── config/                        ← SHARED infra (env.ts, prisma.ts, swagger.ts)
+├── middlewares/                   ← SHARED (errorHandler, notFound, validate, requireAuth, requireRole)
+├── utils/                         ← SHARED pure helpers (ApiError, jwt, password, token, slugify, logger)
+├── services/                      ← SHARED cross-module services (email.service.ts)
+├── types/                         ← Express.Request augmentation for req.user
+├── routes.ts                      ← aggregates every module's routes
+├── app.ts                         ← Express app assembly
+└── server.ts                      ← boots the server, graceful shutdown</code></pre>
+
+      <h3>The 5 files in every module</h3>
+      <table>
+        <thead><tr><th>File</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td><code>&lt;feature&gt;.validation.ts</code></td><td>Zod schemas (one per endpoint). Also exports the inferred TS types.</td></tr>
+          <tr><td><code>&lt;feature&gt;.repository.ts</code></td><td>The only file that calls Prisma. Returns raw rows.</td></tr>
+          <tr><td><code>&lt;feature&gt;.service.ts</code></td><td>Business logic. Calls the repo, throws <code>ApiError</code> on failure.</td></tr>
+          <tr><td><code>&lt;feature&gt;.controller.ts</code></td><td>Thin HTTP wrapper. Parses <code>req</code>, calls the service, shapes the response.</td></tr>
+          <tr><td><code>&lt;feature&gt;.route.ts</code></td><td>Wires URL → middleware → controller. Holds <code>@openapi</code> JSDoc blocks.</td></tr>
+        </tbody>
+      </table>
+      <p>Admin-only endpoints in a module live in a second file <code>&lt;feature&gt;.admin.route.ts</code>. Both are mounted from <code>routes.ts</code> under the appropriate prefix.</p>
+
+      <!-- ===== AUTH ===== -->
+      <h2 id="auth">4. Auth model</h2>
+      <p><strong>Two login doors, same backend.</strong> Each one only accepts users whose role matches that door.</p>
+      <table>
+        <thead><tr><th>Endpoint</th><th>Allowed roles</th><th>On mismatch</th></tr></thead>
+        <tbody>
+          <tr><td><code>POST /auth/login</code></td><td><code>patient</code></td><td>Admin accounts → 403 <em>"Admin accounts must use the admin login page."</em></td></tr>
+          <tr><td><code>POST /admin/auth/login</code></td><td><code>admin</code>, <code>doctor</code></td><td>Patient accounts → 403 <em>"Patient accounts must use the regular login page."</em></td></tr>
+        </tbody>
+      </table>
+      <p>Both return the <strong>same <code>LoginResponse</code></strong> shape: <code>{ token, user }</code>. The only difference is the role-gate.</p>
+
+      <h3>End-to-end request flow</h3>
+      <ol>
+        <li>User logs in (or clicks a magic link) → backend issues a <strong>JWT</strong> signed with <code>JWT_SECRET</code>, valid for <code>JWT_EXPIRES_IN</code> (default 7 days).</li>
+        <li>JWT payload: <code>{ sub: userId, email, role, iat, exp }</code>.</li>
+        <li>Frontend stores the JWT.</li>
+        <li>Every subsequent request sends it: <code>Authorization: Bearer &lt;token&gt;</code>.</li>
+        <li>The <code>requireAuth</code> middleware verifies the signature and attaches <code>req.user</code>.</li>
+        <li><code>requireRole('admin', 'doctor')</code> checks <code>req.user.role</code> and returns 403 on mismatch.</li>
+      </ol>
+
+      <h3>Magic-link email verification</h3>
+      <ol>
+        <li>On registration, user is created as <code>is_email_verified=false</code>.</li>
+        <li>Backend generates a 64-char token → stores <strong>only the SHA-256 hash</strong> in <code>email_tokens</code>.</li>
+        <li>Emails the user a link: <code>{APP_URL}/auth/magic-login?token=&lt;raw&gt;</code>.</li>
+        <li>Patient clicks → frontend POSTs the token to <code>/auth/magic-login</code>.</li>
+        <li>Backend hashes it, verifies not-used + not-expired, then atomically marks used, flips <code>is_email_verified=true</code>, bumps <code>lastLoginAt</code>, issues JWT.</li>
+      </ol>
+      <div class="note">If SMTP isn't configured in <code>.env</code>, the magic link is logged to the console — the dev loop still works end-to-end without a mail provider.</div>
+
+      <!-- ===== PATIENT JOURNEY ===== -->
+      <h2 id="patient">5. Patient journey — step by step</h2>
+      <table>
+        <thead><tr><th>#</th><th>Patient action</th><th>Endpoint</th><th>Backend does</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Fills registration form</td><td><span class="method POST">POST</span><code>/auth/register</code></td><td>Creates <code>user</code> (unverified) + <code>patient_profile</code> in a transaction; generates magic-link token; emails it</td></tr>
+          <tr><td>2</td><td>Clicks magic link</td><td><span class="method POST">POST</span><code>/auth/magic-login</code></td><td>Hashes token, validates it, marks used, flips <code>is_email_verified=true</code>, issues JWT</td></tr>
+          <tr><td>3</td><td>(Returning) email + password login</td><td><span class="method POST">POST</span><code>/auth/login</code></td><td>Verifies password, issues JWT (patient role only)</td></tr>
+          <tr><td>4</td><td>Sees available assessments</td><td><span class="method GET">GET</span><code>/categories</code></td><td>Returns only <strong>active</strong> categories + question count</td></tr>
+          <tr><td>5</td><td>Picks a category, starts</td><td><span class="method POST">POST</span><code>/categories/:categoryId/assessments</code></td><td>Creates <code>assessment</code> row; rejects duplicates with 409</td></tr>
+          <tr><td>6</td><td>Sees the questions</td><td><span class="method GET">GET</span><code>/categories/:categoryId/questions</code></td><td>Returns questions + options with <strong>scores hidden</strong> to avoid bias</td></tr>
+          <tr><td>7</td><td>Answers each question</td><td><span class="method POST">POST</span><code>/assessments/:id/answers</code></td><td>Upserts answer; <strong>snapshots the score</strong> (applies reverse-scoring here); idempotent</td></tr>
+          <tr><td>8</td><td>Submits</td><td><span class="method POST">POST</span><code>/assessments/:id/submit</code></td><td>Picks scoring recipe from category; writes per-subscale <code>results[]</code>; marks completed; logs activity</td></tr>
+          <tr><td>9</td><td>Views result</td><td><span class="method GET">GET</span><code>/assessments/:id</code></td><td>Returns assessment with answers + per-subscale results</td></tr>
+          <tr><td>10</td><td>Reviews past assessments</td><td><span class="method GET">GET</span><code>/assessments</code></td><td>Lists own assessments; supports <code>?status</code>, <code>?categoryId</code></td></tr>
+        </tbody>
+      </table>
+      <h3>Key guarantees</h3>
+      <ul>
+        <li>A patient <strong>cannot</strong> access another patient's assessments — every query filters by <code>patientId</code> from the JWT.</li>
+        <li><code>scoreSnapshot</code> is <strong>immutable</strong> — admin edits to option scores never change historical answers.</li>
+        <li>Reverse scoring happens <strong>at answer time</strong>, not submit time — the stored snapshot is already the final value.</li>
+      </ul>
+
+      <!-- ===== ADMIN JOURNEY ===== -->
+      <h2 id="admin">6. Admin journey — step by step</h2>
+      <p>Admin users are <strong>seeded via SQL</strong> (no admin registration endpoint on purpose). Everything else runs through the API.</p>
+
+      <h3>One-time setup</h3>
+      <p>Create the admin user with a bcrypt hash — see the <a href="#setup">Local setup</a> section.</p>
+
+      <h3>Daily workflow</h3>
+      <table>
+        <thead><tr><th>#</th><th>Admin action</th><th>Endpoint</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Login</td><td><span class="method POST">POST</span><code>/admin/auth/login</code></td></tr>
+          <tr><td>2</td><td>Open the dashboard</td><td><span class="method GET">GET</span><code>/admin/dashboard/summary</code></td></tr>
+          <tr><td>3</td><td>Create a category (pick <code>scoringType</code>)</td><td><span class="method POST">POST</span><code>/admin/categories</code></td></tr>
+          <tr><td>4</td><td>Add questions + options</td><td><span class="method POST">POST</span><code>/admin/categories/:categoryId/questions</code></td></tr>
+          <tr><td>5</td><td>Set risk bands / cutoffs</td><td><span class="method PUT">PUT</span><code>/admin/categories/:categoryId/risk-bands</code></td></tr>
+          <tr><td>6</td><td>Review patients</td><td><span class="method GET">GET</span><code>/admin/patients?search=alice</code></td></tr>
+          <tr><td>7</td><td>Open a patient</td><td><span class="method GET">GET</span><code>/admin/patients/:id</code></td></tr>
+          <tr><td>8</td><td>Review any assessment</td><td><span class="method GET">GET</span><code>/admin/assessments/:id</code></td></tr>
+          <tr><td>9</td><td>Add a clinical note</td><td><span class="method POST">POST</span><code>/admin/patients/:patientId/notes</code></td></tr>
+          <tr><td>10</td><td>Create a follow-up</td><td><span class="method POST">POST</span><code>/admin/patients/:patientId/follow-ups</code></td></tr>
+          <tr><td>11</td><td>Update follow-up (status=done auto-stamps completedAt)</td><td><span class="method PATCH">PATCH</span><code>/admin/follow-ups/:id</code></td></tr>
+          <tr><td>12</td><td>Filter follow-ups (high-risk callback queue)</td><td><span class="method GET">GET</span><code>/admin/follow-ups?status=pending&amp;priority=high</code></td></tr>
+        </tbody>
+      </table>
+      <h3>Roles</h3>
+      <p>Both <code>admin</code> and <code>doctor</code> share the full admin view. Only <strong>admin</strong> can create/edit categories, questions, and risk bands.</p>
+
+      <!-- ===== API CATALOG ===== -->
+      <h2 id="api">7. Full API catalog</h2>
+      <p>All endpoints are prefixed with <code>/api/v1</code>. All admin endpoints require a Bearer JWT with <code>role=admin</code> or <code>doctor</code> (except admin login).</p>
+
+      <h3>Auth (patient)</h3>
+      <table>
+        <tbody>
+          <tr><td><span class="method POST">POST</span></td><td><code>/auth/register</code></td><td>Register a new patient; sends magic-link email</td></tr>
+          <tr><td><span class="method POST">POST</span></td><td><code>/auth/login</code></td><td>Patient email + password login</td></tr>
+          <tr><td><span class="method POST">POST</span></td><td><code>/auth/magic-login</code></td><td>Verify magic-link token → issues JWT</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Admin Auth</h3>
+      <table>
+        <tbody>
+          <tr><td><span class="method POST">POST</span></td><td><code>/admin/auth/login</code></td><td>Admin / doctor email + password login</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Categories</h3>
+      <table>
+        <thead><tr><th>Method</th><th>Path</th><th>Who</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><span class="method GET">GET</span></td><td><code>/categories</code></td><td>Patient</td><td>List active categories + question counts</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/categories/:categoryId/questions</code></td><td>Patient</td><td>Questions for a category (scores hidden)</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/admin/categories</code></td><td>Admin</td><td>List all (incl. inactive)</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/admin/categories/:id</code></td><td>Admin</td><td>Get one</td></tr>
+          <tr><td><span class="method POST">POST</span></td><td><code>/admin/categories</code></td><td>Admin</td><td>Create</td></tr>
+          <tr><td><span class="method PATCH">PATCH</span></td><td><code>/admin/categories/:id</code></td><td>Admin</td><td>Update</td></tr>
+          <tr><td><span class="method DELETE">DELETE</span></td><td><code>/admin/categories/:id</code></td><td>Admin</td><td>Delete (cascades to questions)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Questions</h3>
+      <table>
+        <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><span class="method POST">POST</span></td><td><code>/admin/categories/:categoryId/questions</code></td><td>Create question + 2–7 options</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/admin/categories/:categoryId/questions</code></td><td>List questions in a category</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/admin/questions/:id</code></td><td>Get one with options</td></tr>
+          <tr><td><span class="method PATCH">PATCH</span></td><td><code>/admin/questions/:id</code></td><td>Update (if <code>options</code> present → full replace)</td></tr>
+          <tr><td><span class="method DELETE">DELETE</span></td><td><code>/admin/questions/:id</code></td><td>Delete</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Risk Bands</h3>
+      <table>
+        <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><span class="method POST">POST</span></td><td><code>/admin/categories/:categoryId/risk-bands</code></td><td>Create one band</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/admin/categories/:categoryId/risk-bands</code></td><td>List all</td></tr>
+          <tr><td><span class="method PUT">PUT</span></td><td><code>/admin/categories/:categoryId/risk-bands</code></td><td>Bulk replace (optionally scoped to one subscale)</td></tr>
+          <tr><td><span class="method PATCH">PATCH</span></td><td><code>/admin/risk-bands/:id</code></td><td>Update</td></tr>
+          <tr><td><span class="method DELETE">DELETE</span></td><td><code>/admin/risk-bands/:id</code></td><td>Delete</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Assessments</h3>
+      <table>
+        <thead><tr><th>Method</th><th>Path</th><th>Who</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><span class="method POST">POST</span></td><td><code>/categories/:categoryId/assessments</code></td><td>Patient</td><td>Start a new assessment</td></tr>
+          <tr><td><span class="method POST">POST</span></td><td><code>/assessments/:id/answers</code></td><td>Patient</td><td>Submit one answer (idempotent per question)</td></tr>
+          <tr><td><span class="method POST">POST</span></td><td><code>/assessments/:id/submit</code></td><td>Patient</td><td>Finalize + compute risk</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/assessments/:id</code></td><td>Patient</td><td>View own detail</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/assessments</code></td><td>Patient</td><td>List own history (newest first)</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/admin/assessments</code></td><td>Admin</td><td>List all (filter by patient / category / status)</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/admin/assessments/:id</code></td><td>Admin</td><td>Full detail with patient + question/option text</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Patients (admin)</h3>
+      <table>
+        <tbody>
+          <tr><td><span class="method GET">GET</span></td><td><code>/admin/patients</code></td><td>Paginated directory with search</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/admin/patients/:id</code></td><td>Profile + stats + recent assessments + recent notes</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Clinical Notes (admin)</h3>
+      <table>
+        <tbody>
+          <tr><td><span class="method POST">POST</span></td><td><code>/admin/patients/:patientId/notes</code></td><td>Create note (logs <code>note_added</code> activity)</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/admin/patients/:patientId/notes</code></td><td>List notes for patient</td></tr>
+          <tr><td><span class="method PATCH">PATCH</span></td><td><code>/admin/notes/:id</code></td><td>Edit content</td></tr>
+          <tr><td><span class="method DELETE">DELETE</span></td><td><code>/admin/notes/:id</code></td><td>Delete</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Follow-ups (admin)</h3>
+      <table>
+        <tbody>
+          <tr><td><span class="method POST">POST</span></td><td><code>/admin/patients/:patientId/follow-ups</code></td><td>Create for a patient</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/admin/follow-ups</code></td><td>Paginated list with filters</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/admin/follow-ups/:id</code></td><td>Detail</td></tr>
+          <tr><td><span class="method PATCH">PATCH</span></td><td><code>/admin/follow-ups/:id</code></td><td>Update (status=done auto-stamps completedAt)</td></tr>
+          <tr><td><span class="method DELETE">DELETE</span></td><td><code>/admin/follow-ups/:id</code></td><td>Delete</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Dashboard (admin)</h3>
+      <table>
+        <tbody>
+          <tr><td><span class="method GET">GET</span></td><td><code>/admin/dashboard/summary?days=7</code></td><td>One call: KPIs + daily trend + risk by category + activity feed</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Health &amp; Docs</h3>
+      <table>
+        <tbody>
+          <tr><td><span class="method GET">GET</span></td><td><code>/health</code></td><td>Liveness probe</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/api/docs</code></td><td>Swagger UI</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/api/docs.json</code></td><td>Raw OpenAPI spec</td></tr>
+        </tbody>
+      </table>
+
+      <!-- ===== SCORING ===== -->
+      <h2 id="scoring">8. The 3 scoring recipes</h2>
+      <p>Every category carries a <code>scoringType</code>. On submit, the service dispatches to one of three recipes.</p>
+
+      <h3>Recipe A · <code>total</code> (ISAA-style)</h3>
+      <p><strong>One grand total → one risk band.</strong> No subscales, no reverse scoring.</p>
+      <table>
+        <thead><tr><th>Question</th><th>Chosen option</th><th>Score</th></tr></thead>
+        <tbody>
+          <tr><td>Q1</td><td>Frequently</td><td>3</td></tr>
+          <tr><td>Q2</td><td>Mostly</td><td>4</td></tr>
+          <tr><td>Q3</td><td>Always</td><td>5</td></tr>
+          <tr><td colspan="2"><strong>Total</strong></td><td><strong>12</strong></td></tr>
+        </tbody>
+      </table>
+      <p>Look up the matching band where <code>min_score ≤ 12 ≤ max_score</code> and <code>subscale IS NULL</code>. One row written, <code>subscale=NULL</code>.</p>
+
+      <h3>Recipe B · <code>subscale_sum_cutoff</code> (SCARED-style)</h3>
+      <p><strong>Group by subscale → sum each → compare to that subscale's cutoff.</strong> Also writes an <code>overall</code> row.</p>
+      <table>
+        <thead><tr><th>Question</th><th>Subscale</th><th>Score</th></tr></thead>
+        <tbody>
+          <tr><td>Q1</td><td>panic</td><td>2</td></tr>
+          <tr><td>Q6</td><td>panic</td><td>2</td></tr>
+          <tr><td>Q5</td><td>generalized</td><td>2</td></tr>
+          <tr><td>Q7</td><td>generalized</td><td>2</td></tr>
+        </tbody>
+      </table>
+      <table>
+        <thead><tr><th>Subscale</th><th>Sum</th><th>Cutoff</th><th>Risk level</th></tr></thead>
+        <tbody>
+          <tr><td>panic</td><td>4</td><td>≥ 7</td><td><code>normal</code></td></tr>
+          <tr><td>generalized</td><td>4</td><td>≥ 9</td><td><code>normal</code></td></tr>
+          <tr><td>overall</td><td>8</td><td>≥ 25</td><td><code>normal</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>Recipe C · <code>subscale_mean_band</code> (BFI-10-style)</h3>
+      <p><strong>Reverse-score flagged questions → group by subscale → take the mean → look up benchmark band.</strong></p>
+      <p>Reverse-scoring happens at answer time with <code>scoreSnapshot = (max + min) - raw</code>. For a 1–5 Likert scale that's <code>6 − raw</code>.</p>
+      <table>
+        <thead><tr><th>Question</th><th>Raw answer</th><th>Reverse?</th><th>Final score</th></tr></thead>
+        <tbody>
+          <tr><td>Q1 "I see myself as reserved"</td><td>4 (Agree a little)</td><td><strong>Yes</strong> → 6−4</td><td><strong>2</strong></td></tr>
+          <tr><td>Q6 "I see myself as outgoing"</td><td>2 (Disagree a little)</td><td>No</td><td><strong>2</strong></td></tr>
+        </tbody>
+      </table>
+      <p>Mean = (2 + 2) / 2 = <strong>2.0</strong></p>
+      <table>
+        <thead><tr><th>Range</th><th>Band</th></tr></thead>
+        <tbody>
+          <tr><td>4.5 – 5.0</td><td>Very High</td></tr>
+          <tr><td>3.5 – 4.4</td><td>High</td></tr>
+          <tr><td>2.5 – 3.4</td><td>Average</td></tr>
+          <tr><td><strong>1.5 – 2.4</strong></td><td><strong>Low ← matches 2.0</strong></td></tr>
+          <tr><td>1.0 – 1.4</td><td>Very Low</td></tr>
+        </tbody>
+      </table>
+      <p>Result: one row with <code>subscale="extraversion"</code>, <code>totalScore=2.0</code>, <code>riskLevel="low"</code>.</p>
+
+      <h3>Why the distinction matters</h3>
+      <table>
+        <thead><tr><th>Scoring type</th><th>Reverse scoring</th><th>Score shape</th><th>Output rows</th><th>Overall risk?</th></tr></thead>
+        <tbody>
+          <tr><td><code>total</code></td><td>No</td><td>Int sum</td><td>1 (subscale=NULL)</td><td>Yes — set on assessment</td></tr>
+          <tr><td><code>subscale_sum_cutoff</code></td><td>No</td><td>Int sums per subscale</td><td>N+1 (per subscale + overall)</td><td>No</td></tr>
+          <tr><td><code>subscale_mean_band</code></td><td>Yes (per question)</td><td>Decimal means</td><td>N (one per trait)</td><td>No</td></tr>
+        </tbody>
+      </table>
+
+      <!-- ===== DB SCHEMA ===== -->
+      <h2 id="db">9. Database schema</h2>
+      <p>MySQL 8, <code>utf8mb4_0900_ai_ci</code> collation, all PKs are <code>CHAR(36)</code> UUIDs. Managed by Prisma.</p>
+
+      <h3>Tables</h3>
+      <table>
+        <thead><tr><th>Table</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>users</code></td><td>Auth record (email, password hash, role, verified, active, lastLoginAt)</td></tr>
+          <tr><td><code>patient_profiles</code></td><td>1:1 extension of users for patients (name, phone, demographics, consent)</td></tr>
+          <tr><td><code>email_tokens</code></td><td>Hashed magic-login / password-reset tokens; used-once with expiry</td></tr>
+          <tr><td><code>categories</code></td><td>Assessment categories. Carries <code>scoringType</code>.</td></tr>
+          <tr><td><code>category_risk_bands</code></td><td>Score ranges → risk labels, per category and (optionally) per subscale</td></tr>
+          <tr><td><code>questions</code></td><td>Questions in a category. Carries <code>subscale</code> + <code>isReverseScored</code></td></tr>
+          <tr><td><code>question_options</code></td><td>2–7 options per question, each with a <code>score</code></td></tr>
+          <tr><td><code>assessments</code></td><td>One row per patient × category attempt (in_progress / completed / abandoned)</td></tr>
+          <tr><td><code>answers</code></td><td>Patient's chosen option per question. Carries immutable <code>scoreSnapshot</code>.</td></tr>
+          <tr><td><code>assessment_category_results</code></td><td>Per-subscale results computed on submit</td></tr>
+          <tr><td><code>clinical_notes</code></td><td>Free-text notes from admin/doctor on a patient</td></tr>
+          <tr><td><code>follow_ups</code></td><td>Admin queue of callbacks to make for patients</td></tr>
+          <tr><td><code>activity_logs</code></td><td>Append-only audit of important events (feeds the dashboard feed)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Key relationships</h3>
+      <pre><code>users (1) ─── (0..1) patient_profiles
+users (1) ─── (*)    email_tokens
+users (1) ─── (*)    activity_logs          (as actor)
+users (1) ─── (*)    clinical_notes         (as author)
+users (1) ─── (*)    follow_ups             (as assignee)
+
+patient_profiles (1) ─── (*) assessments
+patient_profiles (1) ─── (*) clinical_notes
+patient_profiles (1) ─── (*) follow_ups
+
+categories (1) ─── (*) questions
+categories (1) ─── (*) category_risk_bands
+categories (1) ─── (*) assessments
+categories (1) ─── (*) assessment_category_results
+
+questions (1) ─── (*) question_options
+questions (1) ─── (*) answers
+
+assessments (1) ─── (*) answers
+assessments (1) ─── (*) assessment_category_results
+assessments (1) ─── (*) clinical_notes     (optional link)
+assessments (1) ─── (*) follow_ups         (optional link)</code></pre>
+
+      <h3>Design decisions worth knowing</h3>
+      <ul>
+        <li><strong><code>scoreSnapshot</code> on <code>answers</code></strong> — captured at answer time. Admin edits to option scores never change historical answers.</li>
+        <li><strong>Reverse scoring at answer time</strong> — the stored snapshot is already the final, flipped value.</li>
+        <li><strong><code>minScore</code> / <code>maxScore</code> are DECIMAL(10,4)</strong> — supports both integer sums and decimal means like 1.5–2.4.</li>
+        <li><strong>Email tokens store SHA-256 hashes only</strong> — if the DB leaks, nobody can hijack active magic links.</li>
+        <li><strong>Result uniqueness</strong> is <code>(assessment_id, category_id, subscale)</code> — lets subscale-based tests write multiple result rows per assessment.</li>
+      </ul>
+
+      <!-- ===== SETUP ===== -->
+      <h2 id="setup">10. Local setup</h2>
+
+      <h3>Prerequisites</h3>
+      <ul>
+        <li>Node 20+ and npm 10+</li>
+        <li>MySQL 8 running locally</li>
+      </ul>
+
+      <h3>First-time setup</h3>
+      <ol>
+        <li><code>cd backend &amp;&amp; npm install</code></li>
+        <li>Copy <code>.env.example</code> → <code>.env</code> and fill MySQL credentials + <code>JWT_SECRET</code></li>
+        <li>Create the DB: <code>mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS MentalHealthInventory CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"</code></li>
+        <li>Apply migrations: <code>npx prisma migrate deploy</code></li>
+        <li>Generate the typed client: <code>npx prisma generate</code></li>
+      </ol>
+
+      <h3>Seed an admin user (SQL)</h3>
+      <p>Generate a bcrypt hash first:</p>
+      <pre><code>node -e "const bcrypt=require('bcrypt'); bcrypt.hash('Admin@123',12).then(h=>console.log(h))"</code></pre>
+      <p>Then insert in MySQL:</p>
+      <pre><code>INSERT INTO users (id, email, password_hash, role, is_email_verified, is_active, created_at, updated_at)
+VALUES (
+  UUID(),
+  'admin@athma.com',
+  '&lt;paste hash here&gt;',
+  'admin', 1, 1, NOW(), NOW()
+);</code></pre>
+
+      <h3>Run</h3>
+      <ul>
+        <li>Dev (hot-reload): <code>npm run dev</code></li>
+        <li>Typecheck: <code>npm run typecheck</code></li>
+        <li>Build: <code>npm run build</code> → <code>dist/</code></li>
+        <li>Prod: <code>npm start</code></li>
+        <li>Prisma Studio (GUI): <code>npx prisma studio</code></li>
+      </ul>
+
+      <h3>Where to look</h3>
+      <table>
+        <tbody>
+          <tr><td>API root</td><td><code>http://localhost:5000/api/v1</code></td></tr>
+          <tr><td>Swagger UI</td><td><code>http://localhost:5000/api/docs</code></td></tr>
+          <tr><td>Raw OpenAPI spec</td><td><code>http://localhost:5000/api/docs.json</code></td></tr>
+          <tr><td>Health probe</td><td><code>http://localhost:5000/api/v1/health</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>Env vars quick reference</h3>
+      <table>
+        <thead><tr><th>Var</th><th>Default</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>NODE_ENV</code></td><td>development</td><td></td></tr>
+          <tr><td><code>PORT</code></td><td>5000</td><td></td></tr>
+          <tr><td><code>API_PREFIX</code></td><td>/api/v1</td><td></td></tr>
+          <tr><td><code>CORS_ORIGIN</code></td><td>http://localhost:3000</td><td>Comma-separated list for multiple origins</td></tr>
+          <tr><td><code>APP_URL</code></td><td>http://localhost:3000</td><td>Frontend URL, used to build magic-link in emails</td></tr>
+          <tr><td><code>MAGIC_LINK_TTL_MINUTES</code></td><td>60</td><td></td></tr>
+          <tr><td><code>JWT_SECRET</code></td><td><em>required</em></td><td>Long random string — change before deploying</td></tr>
+          <tr><td><code>JWT_EXPIRES_IN</code></td><td>7d</td><td></td></tr>
+          <tr><td><code>SMTP_HOST</code></td><td><em>empty</em></td><td>Empty → magic links log to console instead of sending</td></tr>
+          <tr><td><code>SMTP_PORT</code></td><td>587</td><td></td></tr>
+          <tr><td><code>SMTP_SECURE</code></td><td>false</td><td><code>true</code> for port 465</td></tr>
+          <tr><td><code>SMTP_USER</code> / <code>SMTP_PASS</code></td><td></td><td></td></tr>
+          <tr><td><code>MAIL_FROM</code></td><td>no-reply@athma.example.com</td><td></td></tr>
+          <tr><td><code>MAIL_FROM_NAME</code></td><td>Athma Mind Care</td><td></td></tr>
+          <tr><td><code>DATABASE_URL</code></td><td><em>required</em></td><td><code>mysql://user:pass@host:3306/MentalHealthInventory</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>Smoke-test commands (curl)</h3>
+      <pre><code># Patient register
+curl -X POST http://localhost:5000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"fullName":"Test","email":"t@x.com","password":"Pass1234","confirmPassword":"Pass1234","phone":"1234567890","address":"X","city":"X","state":"X","pincode":"600001","consent":true}'
+
+# Admin login → copy the token
+curl -X POST http://localhost:5000/api/v1/admin/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@athma.com","password":"Admin@123"}'
+
+# Admin dashboard
+curl http://localhost:5000/api/v1/admin/dashboard/summary \
+  -H "Authorization: Bearer &lt;paste token&gt;"</code></pre>
+
+      <hr />
+      <p style="color: var(--muted); font-size: 13px;">
+        Generated reference for the Athma backend. Open this file in any browser — no build step, no server needed.
+      </p>
+    </div>
+  </body>
+</html>

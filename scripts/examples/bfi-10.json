@@ -1,0 +1,148 @@
+{
+  "name": "Big Five Inventory-10 (BFI-10)",
+  "slug": "bfi-10",
+  "description": "A 10-item short form of the Big Five Personality Inventory (Rammstedt & John, 2007). Each of the five personality traits is measured by two items (one direct, one reverse-scored) rated on a 5-point Likert scale. Items are prefaced with 'I see myself as someone who...'. Each trait's mean (range 1.0-5.0) is interpreted as Low (1.0-2.4), Normal (2.5-3.4), or High (3.5-5.0).",
+  "scoringType": "subscale_mean_band",
+  "displayOrder": 6,
+  "isActive": true,
+
+  "questions": [
+    {
+      "text": "I see myself as someone who... is reserved",
+      "subscale": "extraversion",
+      "isReverseScored": true,
+      "options": [
+        { "text": "Disagree strongly",          "score": 1 },
+        { "text": "Disagree a little",          "score": 2 },
+        { "text": "Neither agree nor disagree", "score": 3 },
+        { "text": "Agree a little",             "score": 4 },
+        { "text": "Agree strongly",             "score": 5 }
+      ]
+    },
+    {
+      "text": "I see myself as someone who... is generally trusting",
+      "subscale": "agreeableness",
+      "options": [
+        { "text": "Disagree strongly",          "score": 1 },
+        { "text": "Disagree a little",          "score": 2 },
+        { "text": "Neither agree nor disagree", "score": 3 },
+        { "text": "Agree a little",             "score": 4 },
+        { "text": "Agree strongly",             "score": 5 }
+      ]
+    },
+    {
+      "text": "I see myself as someone who... tends to be lazy",
+      "subscale": "conscientiousness",
+      "isReverseScored": true,
+      "options": [
+        { "text": "Disagree strongly",          "score": 1 },
+        { "text": "Disagree a little",          "score": 2 },
+        { "text": "Neither agree nor disagree", "score": 3 },
+        { "text": "Agree a little",             "score": 4 },
+        { "text": "Agree strongly",             "score": 5 }
+      ]
+    },
+    {
+      "text": "I see myself as someone who... is relaxed, handles stress well",
+      "subscale": "neuroticism",
+      "isReverseScored": true,
+      "options": [
+        { "text": "Disagree strongly",          "score": 1 },
+        { "text": "Disagree a little",          "score": 2 },
+        { "text": "Neither agree nor disagree", "score": 3 },
+        { "text": "Agree a little",             "score": 4 },
+        { "text": "Agree strongly",             "score": 5 }
+      ]
+    },
+    {
+      "text": "I see myself as someone who... has few artistic interests",
+      "subscale": "openness",
+      "isReverseScored": true,
+      "options": [
+        { "text": "Disagree strongly",          "score": 1 },
+        { "text": "Disagree a little",          "score": 2 },
+        { "text": "Neither agree nor disagree", "score": 3 },
+        { "text": "Agree a little",             "score": 4 },
+        { "text": "Agree strongly",             "score": 5 }
+      ]
+    },
+    {
+      "text": "I see myself as someone who... is outgoing, sociable",
+      "subscale": "extraversion",
+      "options": [
+        { "text": "Disagree strongly",          "score": 1 },
+        { "text": "Disagree a little",          "score": 2 },
+        { "text": "Neither agree nor disagree", "score": 3 },
+        { "text": "Agree a little",             "score": 4 },
+        { "text": "Agree strongly",             "score": 5 }
+      ]
+    },
+    {
+      "text": "I see myself as someone who... tends to find fault with others",
+      "subscale": "agreeableness",
+      "isReverseScored": true,
+      "options": [
+        { "text": "Disagree strongly",          "score": 1 },
+        { "text": "Disagree a little",          "score": 2 },
+        { "text": "Neither agree nor disagree", "score": 3 },
+        { "text": "Agree a little",             "score": 4 },
+        { "text": "Agree strongly",             "score": 5 }
+      ]
+    },
+    {
+      "text": "I see myself as someone who... does a thorough job",
+      "subscale": "conscientiousness",
+      "options": [
+        { "text": "Disagree strongly",          "score": 1 },
+        { "text": "Disagree a little",          "score": 2 },
+        { "text": "Neither agree nor disagree", "score": 3 },
+        { "text": "Agree a little",             "score": 4 },
+        { "text": "Agree strongly",             "score": 5 }
+      ]
+    },
+    {
+      "text": "I see myself as someone who... gets nervous easily",
+      "subscale": "neuroticism",
+      "options": [
+        { "text": "Disagree strongly",          "score": 1 },
+        { "text": "Disagree a little",          "score": 2 },
+        { "text": "Neither agree nor disagree", "score": 3 },
+        { "text": "Agree a little",             "score": 4 },
+        { "text": "Agree strongly",             "score": 5 }
+      ]
+    },
+    {
+      "text": "I see myself as someone who... has an active imagination",
+      "subscale": "openness",
+      "options": [
+        { "text": "Disagree strongly",          "score": 1 },
+        { "text": "Disagree a little",          "score": 2 },
+        { "text": "Neither agree nor disagree", "score": 3 },
+        { "text": "Agree a little",             "score": 4 },
+        { "text": "Agree strongly",             "score": 5 }
+      ]
+    }
+  ],
+
+  "riskBands": [
+    { "subscale": "extraversion",      "level": "low",    "minScore": 1.0, "maxScore": 2.4, "label": "Low",    "color": "#F8B978" },
+    { "subscale": "extraversion",      "level": "normal", "minScore": 2.5, "maxScore": 3.4, "label": "Normal", "color": "#7BB661" },
+    { "subscale": "extraversion",      "level": "high",   "minScore": 3.5, "maxScore": 5.0, "label": "High",   "color": "#EF6B1A" },
+
+    { "subscale": "agreeableness",     "level": "low",    "minScore": 1.0, "maxScore": 2.4, "label": "Low",    "color": "#F8B978" },
+    { "subscale": "agreeableness",     "level": "normal", "minScore": 2.5, "maxScore": 3.4, "label": "Normal", "color": "#7BB661" },
+    { "subscale": "agreeableness",     "level": "high",   "minScore": 3.5, "maxScore": 5.0, "label": "High",   "color": "#EF6B1A" },
+
+    { "subscale": "conscientiousness", "level": "low",    "minScore": 1.0, "maxScore": 2.4, "label": "Low",    "color": "#F8B978" },
+    { "subscale": "conscientiousness", "level": "normal", "minScore": 2.5, "maxScore": 3.4, "label": "Normal", "color": "#7BB661" },
+    { "subscale": "conscientiousness", "level": "high",   "minScore": 3.5, "maxScore": 5.0, "label": "High",   "color": "#EF6B1A" },
+
+    { "subscale": "neuroticism",       "level": "low",    "minScore": 1.0, "maxScore": 2.4, "label": "Low",    "color": "#F8B978" },
+    { "subscale": "neuroticism",       "level": "normal", "minScore": 2.5, "maxScore": 3.4, "label": "Normal", "color": "#7BB661" },
+    { "subscale": "neuroticism",       "level": "high",   "minScore": 3.5, "maxScore": 5.0, "label": "High",   "color": "#EF6B1A" },
+
+    { "subscale": "openness",          "level": "low",    "minScore": 1.0, "maxScore": 2.4, "label": "Low",    "color": "#F8B978" },
+    { "subscale": "openness",          "level": "normal", "minScore": 2.5, "maxScore": 3.4, "label": "Normal", "color": "#7BB661" },
+    { "subscale": "openness",          "level": "high",   "minScore": 3.5, "maxScore": 5.0, "label": "High",   "color": "#EF6B1A" }
+  ]
+}
